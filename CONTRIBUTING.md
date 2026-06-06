@@ -3,7 +3,7 @@
 ## Setup
 
 ```bash
-git clone https://github.com/your-org/ai-coding-flow.git
+git clone https://github.com/t-community/ai-coding-flow.git
 cd ai-coding-flow
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt

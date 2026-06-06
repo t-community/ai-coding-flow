@@ -36,7 +36,7 @@ Issue Created → Webhook → AI Codes + Tests → PR/MR Opened → Review Comme
 ### Install
 
 ```bash
-git clone https://github.com/your-org/ai-coding-flow.git
+git clone https://github.com/t-community/ai-coding-flow.git
 cd ai-coding-flow
 pip install -r requirements.txt
 ```
