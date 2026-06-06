@@ -49,3 +49,4 @@ coverage.xml
 
 # Temp work directory used by agent
 /tmp/ai-coding-flow/
+*.db
