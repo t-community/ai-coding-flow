@@ -91,13 +91,26 @@ _LABEL_DONE = "ai: done"
 _LABEL_FAILED = "ai: failed"
 _LABEL_NEEDS_CLARIFICATION = "ai: needs clarification"
 
+_ALL_AI_LABELS = (
+    _LABEL_PROCESSING,
+    _LABEL_DONE,
+    _LABEL_FAILED,
+    _LABEL_NEEDS_CLARIFICATION,
+)
+
 
 def _swap_label(platform, issue_number: int, remove: str, add: str) -> None:
+    for label in _ALL_AI_LABELS:
+        if label == add:
+            continue
+        try:
+            platform.remove_label(issue_number, label)
+        except Exception:
+            pass
     try:
-        platform.remove_label(issue_number, remove)
         platform.set_label(issue_number, add)
     except Exception:
-        logger.exception("Failed to update labels on issue #%d", issue_number)
+        logger.exception("Failed to set label %r on issue #%d", add, issue_number)
 
 
 def _pick_engine(labels: list[str], settings: Settings) -> AgentEngine:
@@ -126,7 +139,7 @@ async def _process_job(job: Job, settings: Settings) -> None:
     engine = _pick_engine(labels, settings)
     logger.info("Using engine %r for issue #%d", engine.name, job.issue_number)
 
-    platform.set_label(job.issue_number, _LABEL_PROCESSING)
+    _swap_label(platform, job.issue_number, "", _LABEL_PROCESSING)
     if job.job_id:
         store.update_job(settings.db_path, job.job_id, status="processing", engine=engine.name)
 
@@ -196,7 +209,7 @@ async def _process_rework_job(job: Job, settings: Settings) -> None:
     platform = create_platform(settings)
     if job.job_id:
         store.update_job(settings.db_path, job.job_id, status="reworking")
-    platform.set_label(job.issue_number, _LABEL_PROCESSING)
+    _swap_label(platform, job.issue_number, "", _LABEL_PROCESSING)
     logger.info("Processing rework for issue #%d on branch %s", job.issue_number, job.pr_branch)
 
     issue = platform.get_issue(job.issue_number)
