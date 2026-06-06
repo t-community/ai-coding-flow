@@ -197,10 +197,18 @@ async def _process_rework_job(job: Job, settings: Settings) -> None:
     if job.job_id:
         store.update_job(settings.db_path, job.job_id, status="reworking")
     platform.set_label(job.issue_number, _LABEL_PROCESSING)
+    logger.info("Processing rework for issue #%d on branch %s", job.issue_number, job.pr_branch)
 
     issue = platform.get_issue(job.issue_number)
     labels = platform.get_labels(job.issue_number)
     engine = _pick_engine(labels, settings)
+    logger.info("Using engine %r for rework of issue #%d", engine.name, job.issue_number)
+
+    if not job.pr_branch:
+        logger.error("Rework job for issue #%d has empty pr_branch — skipping", job.issue_number)
+        platform.post_comment(job.issue_number, "Rework skipped: could not determine branch name.")
+        _swap_label(platform, job.issue_number, _LABEL_PROCESSING, _LABEL_FAILED)
+        return
 
     success, repo_path_str, _initial_commit, error_msg = await asyncio.to_thread(
         run_agent,
