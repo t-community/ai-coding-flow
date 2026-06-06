@@ -20,6 +20,7 @@ class OpenCodeEngine(AgentEngine):
                 "opencode",
                 "run",
                 "--model", settings.openai_model,
+                "--dangerously-skip-permissions",
                 prompt,
             ],
             cwd=str(repo_path),

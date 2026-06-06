@@ -82,10 +82,27 @@ def test_opencode_engine_run_calls_opencode_binary():
         output = OpenCodeEngine().run(Path("/tmp/repo"), "Fix the login bug", _mock_settings())
     cmd = mock_run.call_args[0][0]
     assert cmd[0] == "opencode"
+    assert cmd[1] == "run"          # subcommand must be present
     assert "--model" in cmd
     assert "gpt-4o" in cmd
-    assert "Fix the login bug" in cmd
+    assert cmd[-1] == "Fix the login bug"   # prompt is a positional, must be last
     assert output == "Done."
+
+
+@pytest.mark.skipif(
+    __import__("shutil").which("opencode") is None,
+    reason="opencode binary not installed",
+)
+def test_opencode_binary_accepts_run_help():
+    """Integration test: verify 'opencode run --help' exits 0 with expected output."""
+    import subprocess
+    result = subprocess.run(
+        ["opencode", "run", "--help"],
+        capture_output=True, text=True,
+    )
+    assert result.returncode == 0, f"opencode run --help exited {result.returncode}"
+    output = result.stdout + result.stderr
+    assert "message" in output.lower(), "expected 'message' in opencode run --help output"
 
 
 def test_opencode_engine_run_passes_env_vars():
