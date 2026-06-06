@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import hmac
 import logging
@@ -14,10 +15,13 @@ settings = Settings()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    import asyncio
     task = asyncio.create_task(start_worker(settings))
     yield
     task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(lifespan=lifespan)
@@ -38,7 +42,7 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
         enqueue_job,
         platform="github",
         issue_number=issue["number"],
-        title=issue["title"],
+        title=issue.get("title", ""),
         body=issue.get("body") or "",
     )
     return {"status": "queued"}
@@ -59,7 +63,7 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
         enqueue_job,
         platform="gitlab",
         issue_number=attrs["iid"],
-        title=attrs["title"],
+        title=attrs.get("title", ""),
         body=attrs.get("description") or "",
     )
     return {"status": "queued"}
