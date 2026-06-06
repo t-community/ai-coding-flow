@@ -25,6 +25,7 @@ class OpenCodeEngine(AgentEngine):
                 "opencode",
                 "run",
                 "--model", model,
+                "--dir", str(repo_path),
                 "--dangerously-skip-permissions",
                 prompt,
             ],

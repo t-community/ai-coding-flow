@@ -87,6 +87,8 @@ def test_opencode_engine_run_calls_opencode_binary(tmp_path):
     assert cmd[1] == "run"
     assert "--model" in cmd
     assert "custom/gpt-4o" in cmd       # model is prefixed with provider ID
+    assert "--dir" in cmd
+    assert str(tmp_path) in cmd         # --dir points to the repo
     assert cmd[-1] == "Fix the login bug"   # prompt is positional, must be last
     assert output == "Done."
 
