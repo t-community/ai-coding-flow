@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Literal
 from pydantic_settings import BaseSettings
 
@@ -15,5 +16,7 @@ class Settings(BaseSettings):
     test_cmd: str = ""  # empty = skip testing entirely
     aider_verbose: bool = False  # set true to log all Aider output
     default_agent: str = "aider"
+    admin_password: str = ""
+    db_path: str = str(Path(__file__).parent / "ai_jobs.db")
 
     model_config = {"env_file": ".env"}

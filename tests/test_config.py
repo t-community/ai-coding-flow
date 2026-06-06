@@ -73,3 +73,29 @@ def test_default_agent_can_be_set():
         _env_file=None,
     )
     assert s.default_agent == "opencode"
+
+
+def test_admin_password_defaults_to_empty(monkeypatch):
+    monkeypatch.delenv("ADMIN_PASSWORD", raising=False)
+    monkeypatch.setenv("PLATFORM", "github")
+    monkeypatch.setenv("REPO_URL", "https://github.com/owner/repo")
+    monkeypatch.setenv("WEBHOOK_SECRET", "s")
+    monkeypatch.setenv("OPENAI_API_BASE", "http://localhost/v1")
+    from importlib import reload
+    import config
+    reload(config)
+    s = config.Settings()
+    assert s.admin_password == ""
+
+
+def test_db_path_defaults_to_ai_jobs_db(monkeypatch):
+    monkeypatch.delenv("DB_PATH", raising=False)
+    monkeypatch.setenv("PLATFORM", "github")
+    monkeypatch.setenv("REPO_URL", "https://github.com/owner/repo")
+    monkeypatch.setenv("WEBHOOK_SECRET", "s")
+    monkeypatch.setenv("OPENAI_API_BASE", "http://localhost/v1")
+    from importlib import reload
+    import config
+    reload(config)
+    s = config.Settings()
+    assert s.db_path.endswith("ai_jobs.db")
