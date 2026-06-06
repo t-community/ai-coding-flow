@@ -82,3 +82,15 @@ def test_post_comment_creates_note(platform, mock_project):
     platform.post_comment(7, "AI review comment")
 
     gl_issue.notes.create.assert_called_once_with({"body": "AI review comment"})
+
+
+def test_get_issue_not_found_raises(platform, mock_project):
+    mock_project.issues.list.return_value = []
+    with pytest.raises(ValueError, match="Issue #99 not found"):
+        platform.get_issue(99)
+
+
+def test_post_comment_not_found_raises(platform, mock_project):
+    mock_project.issues.list.return_value = []
+    with pytest.raises(ValueError, match="Issue #99 not found"):
+        platform.post_comment(99, "comment")

@@ -13,6 +13,8 @@ class GitLabPlatform(GitPlatform):
 
     def get_issue(self, number: int) -> Issue:
         issues = self._project.issues.list(iid=number)
+        if not issues:
+            raise ValueError(f"Issue #{number} not found")
         gl_issue = issues[0]
         return Issue(
             number=gl_issue.iid,
@@ -32,5 +34,7 @@ class GitLabPlatform(GitPlatform):
 
     def post_comment(self, issue_number: int, body: str) -> None:
         issues = self._project.issues.list(iid=issue_number)
+        if not issues:
+            raise ValueError(f"Issue #{issue_number} not found")
         gl_issue = issues[0]
         gl_issue.notes.create({"body": body})
