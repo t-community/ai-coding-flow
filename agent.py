@@ -2,7 +2,6 @@ import logging
 import os
 import shlex
 import subprocess
-import sys
 from pathlib import Path
 from tempfile import gettempdir
 from urllib.parse import urlparse, urlunparse
@@ -134,7 +133,7 @@ def _build_prompt(title: str, body: str) -> str:
 def _run_aider(repo_path: Path, prompt: str, settings: Settings) -> str:
     result = subprocess.run(
         [
-            sys.executable, "-m", "aider",
+            "aider",
             "--model", settings.openai_model,
             "--yes",
             "--auto-commits",
