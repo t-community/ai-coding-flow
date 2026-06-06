@@ -93,7 +93,7 @@ def _prepare_repo(repo_path: Path, branch: str, settings: Settings) -> None:
     else:
         repo_path.mkdir(parents=True, exist_ok=True)
         subprocess.run(["git", "clone", auth_url, str(repo_path)], check=True, capture_output=True)
-    subprocess.run(["git", "checkout", "-b", branch], cwd=repo_path, check=True, capture_output=True)
+    subprocess.run(["git", "checkout", "-B", branch], cwd=repo_path, check=True, capture_output=True)
 
 
 def _configure_git_user(repo_path: Path) -> None:
