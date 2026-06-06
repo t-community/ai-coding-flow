@@ -52,6 +52,12 @@ async def _process_job(job: Job, settings: Settings) -> None:
     branch = f"ai/issue-{job.issue_number}-{_slugify(job.title)}"
     logger.info("Processing issue #%d on branch %s", job.issue_number, branch)
 
+    platform.post_comment(
+        job.issue_number,
+        f"**AI coding workflow started**\n\nWorking on branch `{branch}`. "
+        f"Cloning repo and running AI agent — this may take a few minutes.",
+    )
+
     success, repo_path, initial_commit, error_msg = await asyncio.to_thread(
         run_agent,
         issue_number=job.issue_number,
@@ -64,8 +70,9 @@ async def _process_job(job: Job, settings: Settings) -> None:
     if not success:
         platform.post_comment(
             job.issue_number,
-            f"AI attempted to fix this issue but could not produce passing tests "
-            f"after {settings.max_retries} attempts.\n\nLast test output:\n```\n{error_msg}\n```",
+            f"**AI coding workflow failed**\n\n"
+            f"Could not produce passing tests after {settings.max_retries} attempts.\n\n"
+            f"Last test output:\n```\n{error_msg}\n```",
         )
         return
 
@@ -73,10 +80,16 @@ async def _process_job(job: Job, settings: Settings) -> None:
     if not diff.strip():
         platform.post_comment(
             job.issue_number,
-            "AI processed this issue but made no code changes. "
-            "The issue may need more detail or clarification.",
+            "**AI coding workflow completed — no changes made**\n\n"
+            "The AI processed this issue but made no code changes. "
+            "Please add more detail or a concrete example to the issue description.",
         )
         return
+
+    platform.post_comment(
+        job.issue_number,
+        "**AI coding workflow — changes ready**\n\nCode changes complete. Pushing branch and creating PR...",
+    )
 
     await asyncio.to_thread(push_branch, repo_path, branch, settings)
 
@@ -88,6 +101,11 @@ async def _process_job(job: Job, settings: Settings) -> None:
     pr_url = platform.create_pr(branch, pr_title, pr_body)
     logger.info("Created PR/MR: %s", pr_url)
 
+    platform.post_comment(
+        job.issue_number,
+        f"**PR created:** {pr_url}\n\nRunning AI code review...",
+    )
+
     review_comment = await asyncio.to_thread(
         run_review,
         issue_title=job.title,
@@ -95,7 +113,10 @@ async def _process_job(job: Job, settings: Settings) -> None:
         diff=diff,
         settings=settings,
     )
-    platform.post_comment(job.issue_number, f"**AI Review:**\n\n{review_comment}")
+    platform.post_comment(
+        job.issue_number,
+        f"**AI code review complete**\n\n{review_comment}",
+    )
     logger.info("Posted review comment for issue #%d", job.issue_number)
 
 
