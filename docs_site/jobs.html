@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Jobs — AI Coding Flow</title>
+<style>
+  :root, [data-theme="light"] {
+    --bg: #ffffff;
+    --surface: #f6f8fa;
+    --border: #d0d7de;
+    --text: #1f2328;
+    --text-muted: #636c76;
+    --accent: #0969da;
+    --accent-fg: #ffffff;
+    --badge-queued-bg: #ddf4ff;
+    --badge-queued-fg: #0550ae;
+    --badge-processing-bg: #fff8c5;
+    --badge-processing-fg: #7d4e00;
+    --badge-reworking-bg: #fff8c5;
+    --badge-reworking-fg: #7d4e00;
+    --badge-done-bg: #dafbe1;
+    --badge-done-fg: #116329;
+    --badge-failed-bg: #ffebe9;
+    --badge-failed-fg: #82071e;
+    --badge-needs-clarification-bg: #fff1e5;
+    --badge-needs-clarification-fg: #953800;
+  }
+  [data-theme="dark"] {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --text: #e6edf3;
+    --text-muted: #8d96a0;
+    --accent: #58a6ff;
+    --accent-fg: #0d1117;
+    --badge-queued-bg: #033d8b;
+    --badge-queued-fg: #cae8ff;
+    --badge-processing-bg: #4d2d00;
+    --badge-processing-fg: #fae17d;
+    --badge-reworking-bg: #4d2d00;
+    --badge-reworking-fg: #fae17d;
+    --badge-done-bg: #033a16;
+    --badge-done-fg: #aff5b4;
+    --badge-failed-bg: #4b1113;
+    --badge-failed-fg: #ffa198;
+    --badge-needs-clarification-bg: #4e2400;
+    --badge-needs-clarification-fg: #ffc680;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.5; }
+  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; gap: 16px; }
+  header a { color: var(--accent); text-decoration: none; font-size: 13px; }
+  header a:hover { text-decoration: underline; }
+  header h1 { flex: 1; font-size: 16px; font-weight: 600; }
+  .theme-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text); font-size: 13px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px; }
+  .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .toolbar span { color: var(--text-muted); font-size: 13px; }
+  .refresh-btn { background: var(--accent); color: var(--accent-fg); border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+  table { width: 100%; border-collapse: collapse; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  th { background: var(--surface); color: var(--text-muted); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .5px; padding: 10px 16px; text-align: left; border-bottom: 1px solid var(--border); }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .badge-queued              { background: var(--badge-queued-bg);              color: var(--badge-queued-fg); }
+  .badge-processing          { background: var(--badge-processing-bg);          color: var(--badge-processing-fg); }
+  .badge-reworking           { background: var(--badge-reworking-bg);           color: var(--badge-reworking-fg); }
+  .badge-done                { background: var(--badge-done-bg);                color: var(--badge-done-fg); }
+  .badge-failed              { background: var(--badge-failed-bg);              color: var(--badge-failed-fg); }
+  .badge-needs_clarification { background: var(--badge-needs-clarification-bg); color: var(--badge-needs-clarification-fg); }
+  .issue-title { font-weight: 500; }
+  .issue-num { color: var(--text-muted); font-size: 12px; }
+  a.pr-link { color: var(--accent); text-decoration: none; font-size: 12px; }
+  a.pr-link:hover { text-decoration: underline; }
+  .empty { text-align: center; padding: 48px; color: var(--text-muted); }
+  dialog { border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); padding: 24px; width: 340px; }
+  dialog::backdrop { background: rgba(0,0,0,.5); }
+  dialog h2 { margin-bottom: 8px; font-size: 15px; }
+  dialog p { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; }
+  dialog input { width: 100%; border: 1px solid var(--border); border-radius: 6px; padding: 8px 10px; background: var(--surface); color: var(--text); font-size: 14px; margin-bottom: 12px; }
+  dialog .actions { display: flex; gap: 8px; justify-content: flex-end; }
+  dialog button { padding: 6px 14px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+  .btn-primary { background: var(--accent); color: var(--accent-fg); border: none; }
+  .btn-secondary { background: none; border: 1px solid var(--border); color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <a href="/guide">← Guide</a>
+  <h1>Jobs</h1>
+  <button class="theme-btn" id="themeBtn" onclick="toggleTheme()">🌙</button>
+</header>
+<main>
+  <div class="toolbar">
+    <span id="statusLine">Loading…</span>
+    <button class="refresh-btn" onclick="loadJobs()">Refresh</button>
+  </div>
+  <div id="tableWrap"></div>
+</main>
+
+<dialog id="authDialog">
+  <h2>Admin password required</h2>
+  <p>Enter the <code>ADMIN_PASSWORD</code> to view job history.</p>
+  <input type="password" id="pwInput" placeholder="Password" autocomplete="current-password">
+  <div class="actions">
+    <button class="btn-primary" onclick="submitPassword()">Sign in</button>
+  </div>
+</dialog>
+
+<script>
+  // ── theme ─────────────────────────────────────────────────────────────────
+  function applyTheme(t) {
+    document.documentElement.dataset.theme = t;
+    document.getElementById('themeBtn').textContent = t === 'dark' ? '☀️' : '🌙';
+    localStorage.setItem('theme', t);
+  }
+  function toggleTheme() {
+    applyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  }
+  (function () {
+    const saved = localStorage.getItem('theme');
+    const sys = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    applyTheme(saved || sys);
+  })();
+
+  // ── auth ──────────────────────────────────────────────────────────────────
+  function getToken() { return sessionStorage.getItem('adminToken') || ''; }
+  function submitPassword() {
+    const pw = document.getElementById('pwInput').value;
+    if (!pw) return;
+    sessionStorage.setItem('adminToken', pw);
+    document.getElementById('authDialog').close();
+    document.getElementById('pwInput').value = '';
+    loadJobs();
+  }
+  document.getElementById('pwInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') submitPassword();
+  });
+
+  // ── data ──────────────────────────────────────────────────────────────────
+  function formatDate(iso) {
+    if (!iso) return '—';
+    const d = new Date(iso);
+    return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function renderTable(jobs) {
+    const wrap = document.getElementById('tableWrap');
+    if (!jobs.length) {
+      wrap.innerHTML = '<div class="empty">No jobs yet.</div>';
+      return;
+    }
+    const rows = jobs.map(j => `
+      <tr>
+        <td><span class="badge badge-${j.status}">${j.status.replace('_', ' ')}</span></td>
+        <td>
+          <div class="issue-title">${escHtml(j.issue_title)}</div>
+          <div class="issue-num">${escHtml(j.platform)} #${j.issue_number}</div>
+        </td>
+        <td>${j.engine ? escHtml(j.engine) : '—'}</td>
+        <td>${formatDate(j.created_at)}</td>
+        <td>${j.pr_url ? `<a class="pr-link" href="${escHtml(j.pr_url)}" target="_blank" rel="noopener">PR ↗</a>` : '—'}</td>
+      </tr>`).join('');
+    wrap.innerHTML = `
+      <table>
+        <thead><tr><th>Status</th><th>Issue</th><th>Engine</th><th>Created</th><th>PR</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  async function loadJobs() {
+    const statusLine = document.getElementById('statusLine');
+    statusLine.textContent = 'Loading…';
+    try {
+      const resp = await fetch('/api/jobs', {
+        headers: getToken() ? { 'X-Admin-Token': getToken() } : {},
+      });
+      if (resp.status === 401) {
+        sessionStorage.removeItem('adminToken');
+        document.getElementById('authDialog').showModal();
+        statusLine.textContent = 'Authentication required.';
+        return;
+      }
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      const jobs = await resp.json();
+      renderTable(jobs);
+      statusLine.textContent = `${jobs.length} job${jobs.length !== 1 ? 's' : ''} · refreshed ${new Date().toLocaleTimeString()}`;
+    } catch (err) {
+      statusLine.textContent = `Error: ${err.message}`;
+    }
+  }
+
+  // ── boot ──────────────────────────────────────────────────────────────────
+  loadJobs();
+  setInterval(loadJobs, 30000);
+</script>
+</body>
+</html>
