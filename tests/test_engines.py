@@ -82,7 +82,8 @@ def test_opencode_engine_run_calls_opencode_binary(tmp_path):
          patch("engines.opencode._write_opencode_config"):
         mock_run.return_value = MagicMock(stdout="Done.", stderr="", returncode=0)
         output = OpenCodeEngine().run(tmp_path, "Fix the login bug", _mock_settings())
-    cmd = mock_run.call_args[0][0]
+    # first call is the opencode invocation; later calls are git add / git commit
+    cmd = mock_run.call_args_list[0][0][0]
     assert cmd[0] == "opencode"
     assert cmd[1] == "run"
     assert "--model" in cmd
@@ -99,9 +100,24 @@ def test_opencode_engine_run_passes_env_vars(tmp_path):
          patch("engines.opencode._write_opencode_config"):
         mock_run.return_value = MagicMock(stdout="", stderr="", returncode=0)
         OpenCodeEngine().run(tmp_path, "prompt", _mock_settings())
-    env = mock_run.call_args[1]["env"]
+    # env is only set on the opencode call, not the git calls
+    env = mock_run.call_args_list[0][1]["env"]
     assert env["OPENAI_API_KEY"] == "local"
     assert "OPENAI_BASE_URL" not in env     # URL is now in the config file, not env
+
+
+def test_opencode_engine_commits_changes_after_run(tmp_path):
+    from engines.opencode import OpenCodeEngine
+    calls = []
+    def fake_run(cmd, **kwargs):
+        calls.append(cmd)
+        return MagicMock(stdout="", stderr="", returncode=0)
+    with patch("engines.opencode.subprocess.run", side_effect=fake_run), \
+         patch("engines.opencode._write_opencode_config"):
+        OpenCodeEngine().run(tmp_path, "fix it", _mock_settings())
+    cmds = [" ".join(c) for c in calls]
+    assert any("git add" in c for c in cmds), "expected git add -A"
+    assert any("git commit" in c for c in cmds), "expected git commit"
 
 
 def test_opencode_write_config_creates_provider(tmp_path):

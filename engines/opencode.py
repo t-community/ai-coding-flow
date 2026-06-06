@@ -40,7 +40,17 @@ class OpenCodeEngine(AgentEngine):
         )
         output = (result.stdout + result.stderr).strip()
         logger.info("OpenCode output:\n%s", output)
+        _git_commit_all(repo_path)
         return output
+
+
+def _git_commit_all(repo_path: Path) -> None:
+    """Stage and commit any changes opencode left uncommitted. No-op if tree is clean."""
+    subprocess.run(["git", "add", "-A"], cwd=str(repo_path), capture_output=True)
+    subprocess.run(
+        ["git", "commit", "-m", "ai: apply opencode changes"],
+        cwd=str(repo_path), capture_output=True,
+    )
 
 
 def _write_opencode_config(settings: Settings) -> None:
