@@ -35,7 +35,10 @@ def run_agent(
 
     if not settings.test_cmd:
         logger.info("Running Aider (no test cmd) for issue #%d", issue_number)
-        _run_aider(repo_path, prompt, settings)
+        aider_output = _run_aider(repo_path, prompt, settings)
+        head_after = _git_head(repo_path)
+        if head_after == initial_commit:
+            logger.warning("Aider made no commits for issue #%d. Aider output:\n%s", issue_number, aider_output)
         return True, str(repo_path), initial_commit, ""
 
     error_msg = ""
@@ -128,8 +131,8 @@ def _build_prompt(title: str, body: str) -> str:
     )
 
 
-def _run_aider(repo_path: Path, prompt: str, settings: Settings) -> None:
-    subprocess.run(
+def _run_aider(repo_path: Path, prompt: str, settings: Settings) -> str:
+    result = subprocess.run(
         [
             sys.executable, "-m", "aider",
             "--model", settings.openai_model,
@@ -148,6 +151,10 @@ def _run_aider(repo_path: Path, prompt: str, settings: Settings) -> None:
         text=True,
         timeout=600,
     )
+    output = (result.stdout + result.stderr).strip()
+    if settings.aider_verbose:
+        logger.info("Aider output:\n%s", output)
+    return output
 
 
 _PY_COMPAT_SHIM = '''\
