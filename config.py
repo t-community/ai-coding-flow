@@ -12,6 +12,6 @@ class Settings(BaseSettings):
     openai_api_key: str = "local"
     openai_model: str = "qwen2.5-coder:32b"
     max_retries: int = 3
-    test_cmd: str = "pytest"
+    test_cmd: str = ""  # empty = skip testing entirely
 
     model_config = {"env_file": ".env"}

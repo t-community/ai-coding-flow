@@ -31,11 +31,16 @@ def run_agent(
     _configure_git_user(repo_path)
     initial_commit = _git_head(repo_path)
 
+    prompt = _build_prompt(issue_title, issue_body)
+
+    if not settings.test_cmd:
+        logger.info("Running Aider (no test cmd) for issue #%d", issue_number)
+        _run_aider(repo_path, prompt, settings)
+        return True, str(repo_path), initial_commit, ""
+
     error_msg = ""
     for attempt in range(settings.max_retries):
-        if attempt == 0:
-            prompt = _build_prompt(issue_title, issue_body)
-        else:
+        if attempt > 0:
             prompt = (
                 f"The tests are still failing after your last attempt.\n\n"
                 f"Test output:\n```\n{error_msg}\n```\n\n"
