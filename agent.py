@@ -1,6 +1,6 @@
 import logging
 import os
-import re
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -147,7 +147,7 @@ def _run_aider(repo_path: Path, prompt: str, settings: Settings) -> None:
 
 def _run_tests(repo_path: Path, test_cmd: str) -> tuple[bool, str]:
     result = subprocess.run(
-        test_cmd.split(),
+        shlex.split(test_cmd),
         cwd=str(repo_path),
         capture_output=True,
         text=True,
