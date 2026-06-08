@@ -1,6 +1,8 @@
 import logging
 import shlex
+import shutil
 import subprocess
+import time
 from pathlib import Path
 from tempfile import gettempdir
 from urllib.parse import urlparse, urlunparse
@@ -11,6 +13,28 @@ from engines.base import AgentEngine
 logger = logging.getLogger(__name__)
 
 WORK_DIR = Path(gettempdir()) / "ai-coding-flow"
+
+
+def cleanup_repo(repo_path: str) -> None:
+    try:
+        shutil.rmtree(repo_path, ignore_errors=True)
+        logger.info("Cleaned up work dir: %s", repo_path)
+    except Exception:
+        logger.exception("Failed to clean up %s", repo_path)
+
+
+def cleanup_old_repos(max_age_days: int = 2) -> None:
+    """Remove any work directories older than max_age_days. Call on startup."""
+    if not WORK_DIR.exists():
+        return
+    cutoff = time.time() - max_age_days * 86400
+    for child in WORK_DIR.iterdir():
+        if child.is_dir() and child.stat().st_mtime < cutoff:
+            try:
+                shutil.rmtree(child)
+                logger.info("Evicted stale work dir: %s", child)
+            except Exception:
+                logger.exception("Failed to evict stale dir: %s", child)
 
 
 def run_agent(

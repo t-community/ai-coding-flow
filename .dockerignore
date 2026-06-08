@@ -1,4 +1,11 @@
-# Python
+# Secrets — must not enter the image
+.env
+*.env
+
+# Git history
+.git/
+
+# Python artifacts
 __pycache__/
 *.py[cod]
 *.pyo
@@ -16,35 +23,21 @@ venv/
 env/
 ENV/
 
-# Environment / secrets
-.env
-*.env
-
-# Pytest
+# Test / lint caches
 .pytest_cache/
 .cache/
-
-# Coverage
 .coverage
 htmlcov/
 coverage.xml
-
-# MyPy
 .mypy_cache/
-
-# Ruff
 .ruff_cache/
 
 # IDEs
 .idea/
 .vscode/
-*.swp
-*.swo
 
 # macOS
 .DS_Store
 
-
-# Temp work directory used by agent
-/tmp/ai-coding-flow/
+# Local DB
 *.db

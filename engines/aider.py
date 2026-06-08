@@ -22,6 +22,7 @@ class AiderEngine(AgentEngine):
                 "--yes",
                 "--auto-commits",
                 "--no-stream",
+                "--no-show-model-warnings",
                 "--map-tokens", "2048",
                 "--message", prompt,
             ],
