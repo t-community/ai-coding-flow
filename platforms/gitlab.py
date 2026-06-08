@@ -1,4 +1,5 @@
 import gitlab
+from gitlab.exceptions import GitlabCreateError
 from urllib.parse import urlparse
 from .base import GitPlatform, Issue
 
@@ -24,13 +25,22 @@ class GitLabPlatform(GitPlatform):
         )
 
     def create_pr(self, branch: str, title: str, body: str) -> str:
-        mr = self._project.mergerequests.create({
-            "source_branch": branch,
-            "target_branch": self._project.default_branch,
-            "title": title,
-            "description": body,
-        })
-        return mr.web_url
+        try:
+            mr = self._project.mergerequests.create({
+                "source_branch": branch,
+                "target_branch": self._project.default_branch,
+                "title": title,
+                "description": body,
+            })
+            return mr.web_url
+        except GitlabCreateError as exc:
+            if exc.response_code == 409:
+                existing = self._project.mergerequests.list(
+                    source_branch=branch, state="opened"
+                )
+                if existing:
+                    return existing[0].web_url
+            raise
 
     def post_comment(self, issue_number: int, body: str) -> None:
         issues = self._project.issues.list(iid=issue_number)
