@@ -468,6 +468,24 @@
       </a>
     </div>
     <div class="nav-group">
+      <div class="nav-group-label">Using the Bot</div>
+      <a class="nav-link" href="#" data-section="user-flow">
+        <span class="icon">🗺️</span> How It Works
+      </a>
+      <a class="nav-link" href="#" data-section="triggering">
+        <span class="icon">⚡</span> Triggering the Bot
+      </a>
+      <a class="nav-link" href="#" data-section="engine-select">
+        <span class="icon">🤖</span> Selecting an Engine
+      </a>
+      <a class="nav-link" href="#" data-section="rework">
+        <span class="icon">🔁</span> /rework Command
+      </a>
+      <a class="nav-link" href="#" data-section="job-status">
+        <span class="icon">📊</span> Job Status
+      </a>
+    </div>
+    <div class="nav-group">
       <div class="nav-group-label">Reference</div>
       <a class="nav-link" href="#" data-section="configuration">
         <span class="icon">⚙️</span> Configuration
@@ -1048,14 +1066,14 @@ OPENAI_MODEL=qwen2.5-coder:32b</code></pre>
           <tbody>
             <tr><td><strong>Label</strong></td><td><span class="label-pill label-purple">agent: opencode</span></td></tr>
             <tr><td><strong>Binary</strong></td><td><code>opencode</code> (must be on <code>$PATH</code>)</td></tr>
-            <tr><td><strong>LLM env var</strong></td><td><code>OPENAI_BASE_URL</code>, <code>OPENAI_API_KEY</code></td></tr>
-            <tr><td><strong>Flags</strong></td><td><code>--model &lt;model&gt; --message &lt;prompt&gt;</code></td></tr>
+            <tr><td><strong>LLM config</strong></td><td>Writes <code>~/.config/opencode/opencode.jsonc</code> with a custom provider from <code>OPENAI_API_BASE</code> / <code>OPENAI_API_KEY</code></td></tr>
+            <tr><td><strong>Flags</strong></td><td><code>--model custom/&lt;model&gt; --dir &lt;repo&gt; --dangerously-skip-permissions &lt;prompt&gt;</code></td></tr>
           </tbody>
         </table>
       </div>
 
       <div class="callout callout-info">
-        <p><strong>Note:</strong> OpenCode uses <code>OPENAI_BASE_URL</code> while Aider uses <code>OPENAI_API_BASE</code>. Both are populated from the same <code>OPENAI_API_BASE</code> config value.</p>
+        <p><strong>Note:</strong> OpenCode uses a config file (<code>~/.config/opencode/opencode.jsonc</code>) that is written automatically from your <code>OPENAI_API_BASE</code> setting before each run. Aider reads <code>OPENAI_API_BASE</code> directly from the environment.</p>
       </div>
 
       <h3>AgentEngine ABC</h3>
@@ -1221,6 +1239,285 @@ pytest -k "get_labels" -v</code></pre>
       <pre><code>pytest --tb=short -q   <span class="cmt"># same check locally</span></code></pre>
     </section>
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         USER FLOW
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-user-flow">
+      <h2>How It Works</h2>
+      <p>Once your admin has set up the bot, using it requires no configuration on your part. Write an issue, and the bot handles everything — you only decide whether to merge the resulting PR.</p>
+
+      <h3>Normal flow</h3>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-box accent">Open issue<br/><small>with clear description</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box">Bot starts<br/><small>ai: processing</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box">AI codes<br/><small>tests run if configured</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box">PR opened<br/><small>+ review comment</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box green">You merge<br/><small>or /rework</small></div>
+        </div>
+      </div>
+
+      <h3>Rework flow</h3>
+      <p>If the first attempt needs revisions, comment <code>/rework</code> on the PR with your feedback:</p>
+      <div class="flow">
+        <div class="flow-step">
+          <div class="flow-box accent">Comment /rework<br/><small>on the PR</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box">Bot re-runs<br/><small>with your feedback</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box">Branch updated<br/><small>same PR</small></div>
+        </div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-step">
+          <div class="flow-box green">Review again<br/><small>and merge</small></div>
+        </div>
+      </div>
+
+      <h3>Outcome labels</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>Meaning</th><th>Next step</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="label-pill label-yellow">ai: processing</span></td>
+              <td>Bot is actively coding your issue</td>
+              <td>Wait — a comment will appear when done</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-green">ai: done</span></td>
+              <td>PR is open with a review comment</td>
+              <td>Review the diff, then merge or <code>/rework</code></td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-red">ai: failed</span></td>
+              <td>Could not produce passing code after all retries</td>
+              <td>Read the error comment, clarify the issue, then retry</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-blue">ai: needs clarification</span></td>
+              <td>Issue too vague — no code was changed</td>
+              <td>Add more detail, then add an <code>agent:</code> label to retry</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         TRIGGERING
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-triggering">
+      <h2>Triggering the Bot</h2>
+
+      <h3>Automatic: open an issue</h3>
+      <p>The bot activates whenever a new issue is opened in the connected repository. No special formatting is required — write the issue as you normally would.</p>
+
+      <div class="callout callout-tip">
+        <p><strong>Good issue = better code.</strong> The AI receives your issue title and body as its only context. The more specific you are, the better the result.</p>
+      </div>
+
+      <h3>What makes a good issue</h3>
+      <div class="card-grid">
+        <div class="card">
+          <div class="card-icon">📍</div>
+          <h4>Be specific</h4>
+          <p>Name the file, function, or component. "Fix the login bug" is vague; "The <code>login()</code> function in <code>auth.py</code> raises <code>KeyError</code> when password is empty" is actionable.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🐛</div>
+          <h4>Include error output</h4>
+          <p>Paste the full error message and traceback. The AI uses this to locate the root cause quickly.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">✅</div>
+          <h4>Describe expected behavior</h4>
+          <p>Explain what correct behavior looks like. "Should return an empty list, not raise" tells the AI exactly what to target.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🔗</div>
+          <h4>Reference related code</h4>
+          <p>Mention function names, class names, or file paths you know are relevant. This narrows the AI's search space considerably.</p>
+        </div>
+      </div>
+
+      <h3>Manual: add an <code>agent:</code> label</h3>
+      <p>Adding an <code>agent:</code> label to an existing issue re-triggers the bot. Use this to:</p>
+      <ul>
+        <li>Retry after a failure, optionally with a different engine</li>
+        <li>Process an issue that was created before the bot was connected</li>
+        <li>Re-run after adding more detail to the issue body</li>
+      </ul>
+      <pre><code><span class="cmt"># Retry issue #42 with the opencode engine</span>
+gh issue edit 42 --add-label "agent: opencode"</code></pre>
+
+      <div class="callout callout-warn">
+        <p><strong>Existing PR:</strong> If the bot already opened a PR for this issue, re-triggering updates the same branch rather than creating a duplicate PR.</p>
+      </div>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         ENGINE SELECT
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-engine-select">
+      <h2>Selecting an Engine</h2>
+      <p>The "engine" is the AI coding tool the bot uses. Your admin configures a default; you can override it per issue with a label.</p>
+
+      <h3>Available engines</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>Engine</th><th>Characteristics</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="label-pill label-yellow">agent: aider</span></td>
+              <td><strong>Aider</strong> (default)</td>
+              <td>Focused, precise diffs. Follows TDD well. Strong at Python and refactoring tasks.</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-purple">agent: opencode</span></td>
+              <td><strong>OpenCode</strong></td>
+              <td>Interactive tool-use, good at exploratory multi-file changes and investigative tasks.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>How to select an engine for your issue</h3>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Open your issue</strong>
+            <p>Create the issue as usual. The default engine runs unless you specify one.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Add an <code>agent:</code> label</strong>
+            <p>In the Labels section of the issue, add <span class="label-pill label-yellow">agent: aider</span> or <span class="label-pill label-purple">agent: opencode</span>. If the issue is already open, adding the label re-triggers processing with that engine.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="callout callout-info">
+        <p><strong>No label?</strong> The bot uses the default engine your admin configured (ask them which one). Most installs default to Aider.</p>
+      </div>
+
+      <h3>Switching engines after failure</h3>
+      <p>If <span class="label-pill label-red">ai: failed</span>, retry with a different engine:</p>
+      <ol>
+        <li>Add the <code>agent:</code> label for the engine you want to try (e.g. <span class="label-pill label-purple">agent: opencode</span>)</li>
+        <li>The bot picks up the job immediately and processes with the new engine</li>
+        <li>The old failed branch is reused — no new branch is created</li>
+      </ol>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         REWORK
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-rework">
+      <h2>The /rework Command</h2>
+      <p>After the bot opens a PR, you can request revisions without closing the PR. Post a comment on the PR starting with <code>/rework</code> followed by your feedback.</p>
+
+      <h3>Step by step</h3>
+      <ol class="steps">
+        <li>
+          <div>
+            <strong>Open the PR the bot created</strong>
+            <p>Review the diff and the AI review comment posted on the issue.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Post a <code>/rework</code> comment on the PR</strong>
+            <pre><code>/rework The null check is missing — please handle the case where
+the input is None. Also add a unit test for an empty list input.</code></pre>
+            <p>The comment must start with <code>/rework</code> and contain your feedback on the same line or below it.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Wait for the bot to re-run</strong>
+            <p>The <span class="label-pill label-yellow">ai: processing</span> label reappears. The bot re-runs with your original issue text <em>plus</em> your rework feedback appended as reviewer notes.</p>
+          </div>
+        </li>
+        <li>
+          <div>
+            <strong>Review the updated PR</strong>
+            <p>The same branch is force-pushed. The PR stays open — your existing review threads and comments are preserved.</p>
+          </div>
+        </li>
+      </ol>
+
+      <div class="callout callout-tip">
+        <p><strong>Be specific.</strong> Point to specific lines, function names, or test cases. "Make it better" gives the AI nothing to work with; "add error handling for <code>None</code> in <code>process_items()</code>" does.</p>
+      </div>
+
+      <div class="callout callout-warn">
+        <p><strong>Requirements:</strong> <code>/rework</code> only works on PRs created by the bot (branch name must follow <code>ai/issue-{number}-{slug}</code>). Comments from bot accounts are ignored.</p>
+      </div>
+
+      <h3>Reworking multiple times</h3>
+      <p>You can post <code>/rework</code> as many times as needed. Each run uses the original issue body plus only the most recent rework comment. If you want to build on previous feedback, include that context explicitly in your new comment.</p>
+    </section>
+
+    <!-- ══════════════════════════════════════════════════════════════════
+         JOB STATUS
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-job-status">
+      <h2>Job Status</h2>
+
+      <h3>What labels mean</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Label</th><th>What's happening</th><th>What to do</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><span class="label-pill label-yellow">ai: processing</span></td>
+              <td>Bot is actively cloning, coding, and running tests</td>
+              <td>Wait — usually completes in 1–5 minutes. A comment appears when done.</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-green">ai: done</span></td>
+              <td>PR is open. An AI review comment was posted on the issue with strengths, concerns, and suggestions.</td>
+              <td>Open the PR link in the comment. Review the diff and the review notes, then merge or post <code>/rework</code>.</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-red">ai: failed</span></td>
+              <td>The bot tried the maximum number of retries and could not produce code that passes tests. The last test output is in an issue comment.</td>
+              <td>Read the error comment. Clarify the issue (add error output, file paths, expected behavior), then add an <code>agent:</code> label to retry — optionally with a different engine.</td>
+            </tr>
+            <tr>
+              <td><span class="label-pill label-blue">ai: needs clarification</span></td>
+              <td>The bot ran successfully but made no code changes — the issue didn't give enough context for the AI to act.</td>
+              <td>Edit the issue to add concrete details (which file, what error, what the fix should look like), then add an <code>agent:</code> label to retry.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Jobs admin page</h3>
+      <p>The <a href="/guide/jobs.html">Jobs page ↗</a> shows a table of all recent bot runs with status, issue numbers, PR links, and timestamps. Your admin may require a password to access it.</p>
+
+      <div class="callout callout-info">
+        <p><strong>Jobs are processed one at a time.</strong> If multiple issues are opened quickly, they queue up and run sequentially. The <span class="label-pill label-yellow">ai: processing</span> label tells you which one is active.</p>
+      </div>
+    </section>
+
     <footer class="page-footer">
       <span>AI Coding Flow — built with FastAPI</span>
       <span>View source on <a href="https://github.com/t-community/ai-coding-flow" target="_blank">GitHub</a></span>
@@ -1260,6 +1557,9 @@ pytest -k "get_labels" -v</code></pre>
 
   const TITLES = {
     overview: 'Overview', quickstart: 'Quick Start',
+    'user-flow': 'How It Works', triggering: 'Triggering the Bot',
+    'engine-select': 'Selecting an Engine', rework: '/rework Command',
+    'job-status': 'Job Status',
     configuration: 'Configuration', webhooks: 'Webhook Setup',
     labels: 'Labels', api: 'API Reference',
     architecture: 'Architecture', engines: 'Engine System',

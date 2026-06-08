@@ -1,4 +1,4 @@
-from github import Github
+from github import Github, GithubException
 from .base import GitPlatform, Issue
 
 
@@ -18,13 +18,21 @@ class GitHubPlatform(GitPlatform):
         )
 
     def create_pr(self, branch: str, title: str, body: str) -> str:
-        pr = self._repo.create_pull(
-            title=title,
-            body=body,
-            head=branch,
-            base=self._repo.default_branch,
-        )
-        return pr.html_url
+        try:
+            pr = self._repo.create_pull(
+                title=title,
+                body=body,
+                head=branch,
+                base=self._repo.default_branch,
+            )
+            return pr.html_url
+        except GithubException as exc:
+            if exc.status == 422:
+                owner = self._repo.owner.login
+                existing = list(self._repo.get_pulls(head=f"{owner}:{branch}", state="open"))
+                if existing:
+                    return existing[0].html_url
+            raise
 
     def post_comment(self, issue_number: int, body: str) -> None:
         issue = self._repo.get_issue(issue_number)
