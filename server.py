@@ -93,8 +93,8 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
     if action == "created" and "comment" in payload and "issue" in payload:
         issue = payload["issue"]
         comment_body = payload["comment"].get("body", "")
-        if issue.get("pull_request") and "/rework" in comment_body:
-            if payload.get("sender", {}).get("type", "") != "Bot":
+        if "/rework" in comment_body and payload.get("sender", {}).get("type", "") != "Bot":
+            if issue.get("pull_request"):
                 pr_api_url = issue["pull_request"].get("url", "")
                 try:
                     branch = await asyncio.to_thread(_get_github_pr_branch, pr_api_url, settings.github_token)
@@ -114,7 +114,17 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
                     pr_branch=branch,
                     rework_comment=comment_body,
                 )
-                return {"status": "queued"}
+            else:
+                # No PR yet (previous run failed or made no changes) — restart fresh
+                background_tasks.add_task(
+                    enqueue_job,
+                    platform="github",
+                    issue_number=issue["number"],
+                    title=issue.get("title", ""),
+                    body=issue.get("body") or "",
+                    rework_comment=comment_body
+                )
+            return {"status": "queued"}
 
     return {"status": "ignored"}
 
@@ -155,24 +165,41 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
 
     if payload.get("object_kind") == "note":
         note_attrs = payload.get("object_attributes", {})
-        if (note_attrs.get("noteable_type") == "MergeRequest"
-                and "/rework" in note_attrs.get("note", "")):
-            mr = payload.get("merge_request", {})
-            branch = mr.get("source_branch", "")
-            issue_number = _parse_issue_number_from_branch(branch)
-            if not issue_number:
-                logger.warning("Could not parse issue number from branch %r", branch)
-                return {"status": "ignored"}
-            background_tasks.add_task(
-                enqueue_job,
-                platform="gitlab",
-                issue_number=issue_number,
-                title=mr.get("title", ""),
-                body=mr.get("description") or "",
-                pr_branch=branch,
-                rework_comment=note_attrs["note"],
-            )
-            return {"status": "queued"}
+        note_text = note_attrs.get("note", "")
+        if "/rework" in note_text:
+            if note_attrs.get("noteable_type") == "MergeRequest":
+                mr = payload.get("merge_request", {})
+                branch = mr.get("source_branch", "")
+                issue_number = _parse_issue_number_from_branch(branch)
+                if not issue_number:
+                    logger.warning("Could not parse issue number from branch %r", branch)
+                    return {"status": "ignored"}
+                background_tasks.add_task(
+                    enqueue_job,
+                    platform="gitlab",
+                    issue_number=issue_number,
+                    title=mr.get("title", ""),
+                    body=mr.get("description") or "",
+                    pr_branch=branch,
+                    rework_comment=note_text,
+                )
+                return {"status": "queued"}
+            elif note_attrs.get("noteable_type") == "Issue":
+                # No MR yet (previous run failed) — restart fresh from the issue
+                issue = payload.get("issue", {})
+                issue_number = issue.get("iid") or note_attrs.get("noteable_id")
+                if not issue_number:
+                    logger.warning("Could not determine issue number from GitLab note payload")
+                    return {"status": "ignored"}
+                background_tasks.add_task(
+                    enqueue_job,
+                    platform="gitlab",
+                    issue_number=issue_number,
+                    title=issue.get("title", ""),
+                    body=issue.get("description") or "",
+                    rework_comment=note_text
+                )
+                return {"status": "queued"}
 
     return {"status": "ignored"}
 

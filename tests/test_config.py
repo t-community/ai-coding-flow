@@ -88,6 +88,32 @@ def test_admin_password_defaults_to_empty(monkeypatch):
     assert s.admin_password == ""
 
 
+def test_openai_model_strips_surrounding_quotes():
+    from config import Settings
+    s = Settings(
+        platform="github",
+        repo_url="https://github.com/owner/repo",
+        webhook_secret="secret",
+        openai_api_base="http://localhost/v1",
+        openai_model='"openai/gpt-4o"',
+        _env_file=None,
+    )
+    assert s.openai_model == "openai/gpt-4o"
+
+
+def test_openai_model_strips_single_quotes():
+    from config import Settings
+    s = Settings(
+        platform="github",
+        repo_url="https://github.com/owner/repo",
+        webhook_secret="secret",
+        openai_api_base="http://localhost/v1",
+        openai_model="'qwen2.5-coder:32b'",
+        _env_file=None,
+    )
+    assert s.openai_model == "qwen2.5-coder:32b"
+
+
 def test_db_path_defaults_to_ai_jobs_db(monkeypatch):
     monkeypatch.delenv("DB_PATH", raising=False)
     monkeypatch.setenv("PLATFORM", "github")

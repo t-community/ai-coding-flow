@@ -22,6 +22,7 @@ class AiderEngine(AgentEngine):
                 "--yes",
                 "--auto-commits",
                 "--no-stream",
+                "--map-tokens", "2048",
                 "--message", prompt,
             ],
             cwd=str(repo_path),

@@ -66,7 +66,7 @@ async def start_worker(settings: Settings) -> None:
     while True:
         job = await _queue.get()
         try:
-            if job.rework_comment:
+            if job.rework_comment and job.pr_branch:
                 await _process_rework_job(job, settings)
             else:
                 await _process_job(job, settings)
@@ -143,11 +143,12 @@ async def _process_job(job: Job, settings: Settings) -> None:
     if job.job_id:
         store.update_job(settings.db_path, job.job_id, status="processing", engine=engine.name)
 
+    issue_body = _build_rework_body(job.body, job.rework_comment) if job.rework_comment else job.body
     success, repo_path, initial_commit, error_msg = await asyncio.to_thread(
         run_agent,
         issue_number=job.issue_number,
         issue_title=job.title,
-        issue_body=job.body,
+        issue_body=issue_body,
         branch=branch,
         settings=settings,
         engine=engine,

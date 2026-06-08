@@ -282,6 +282,34 @@ def test_github_rework_comment_queues_rework_job(client):
     assert "/rework" in kwargs["rework_comment"]
 
 
+def test_github_rework_on_plain_issue_queues_fresh_job(client):
+    """If no PR exists yet (previous run failed), /rework on the issue starts a fresh run."""
+    payload = {
+        "action": "created",
+        "sender": {"type": "User"},
+        "comment": {"body": "/rework try again"},
+        "issue": {
+            "number": 5,
+            "title": "Fix bug",
+            "body": "There is a bug",
+            # no "pull_request" key
+        },
+    }
+    body = json.dumps(payload).encode()
+    with patch("server.enqueue_job", new_callable=AsyncMock) as mock_enqueue:
+        resp = client.post(
+            "/webhook/github",
+            content=body,
+            headers={"X-Hub-Signature-256": _sign(body), "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "queued"
+    mock_enqueue.assert_called_once()
+    kwargs = mock_enqueue.call_args.kwargs
+    assert kwargs["issue_number"] == 5
+    assert "pr_branch" not in kwargs
+
+
 def test_github_bot_rework_comment_is_ignored(client):
     body = json.dumps(GITHUB_BOT_REWORK_COMMENT).encode()
     with patch("server.enqueue_job", new_callable=AsyncMock) as mock_enqueue:
@@ -309,6 +337,36 @@ def test_gitlab_rework_note_queues_rework_job(client):
     kwargs = mock_enqueue.call_args.kwargs
     assert kwargs["pr_branch"] == "ai/issue-42-fix-bug"
     assert "/rework" in kwargs["rework_comment"]
+
+
+def test_gitlab_rework_on_plain_issue_queues_fresh_job(client):
+    """If no MR exists yet, /rework on the issue starts a fresh run."""
+    payload = {
+        "object_kind": "note",
+        "object_attributes": {
+            "noteable_type": "Issue",
+            "noteable_id": 7,
+            "note": "/rework try again",
+        },
+        "issue": {
+            "iid": 7,
+            "title": "Fix bug",
+            "description": "There is a bug",
+        },
+    }
+    body = json.dumps(payload).encode()
+    with patch("server.enqueue_job", new_callable=AsyncMock) as mock_enqueue:
+        resp = client.post(
+            "/webhook/gitlab",
+            content=body,
+            headers={"X-Gitlab-Token": SECRET, "Content-Type": "application/json"},
+        )
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "queued"
+    mock_enqueue.assert_called_once()
+    kwargs = mock_enqueue.call_args.kwargs
+    assert kwargs["issue_number"] == 7
+    assert "pr_branch" not in kwargs
 
 
 def test_api_jobs_open_when_no_password(client):

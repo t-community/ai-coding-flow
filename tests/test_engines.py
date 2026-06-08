@@ -43,6 +43,8 @@ def test_aider_engine_run_calls_aider_binary():
     assert cmd[0] == "aider"
     assert "--model" in cmd
     assert "gpt-4o" in cmd
+    assert "--openai-api-base" in cmd
+    assert "http://localhost:11434/v1" in cmd
     assert "--message" in cmd
     assert "Fix the login bug" in cmd
     assert output == "Changes applied."
