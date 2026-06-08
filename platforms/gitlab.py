@@ -8,8 +8,8 @@ class GitLabPlatform(GitPlatform):
     def __init__(self, token: str, repo_url: str) -> None:
         parsed = urlparse(repo_url)
         base_url = f"{parsed.scheme}://{parsed.netloc}"
-        self._gl = gitlab.Gitlab(base_url, private_token=token)
-        project_path = parsed.path.lstrip("/").rstrip(".git")
+        self._gl = gitlab.Gitlab(base_url, private_token=token, ssl_verify=False)
+        project_path = parsed.path.lstrip("/").removesuffix(".git")
         self._project = self._gl.projects.get(project_path)
 
     def get_issue(self, number: int) -> Issue:

@@ -415,6 +415,49 @@
     .steps li div { flex: 1; }
     .steps li strong { display: block; margin-bottom: 4px; }
 
+    /* ── CHANGELOG ── */
+    .cl-entry {
+      border-left: 2px solid var(--border);
+      padding: 0 0 36px 28px;
+      position: relative;
+    }
+    .cl-entry:last-child { padding-bottom: 0; border-left-color: transparent; }
+    .cl-entry::before {
+      content: '';
+      position: absolute;
+      left: -6px; top: 4px;
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: 2px solid var(--bg);
+    }
+    .cl-date {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      margin-bottom: 6px;
+    }
+    .cl-entry h3 { margin: 0 0 12px; font-size: 16px; }
+    .cl-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 1px 7px;
+      border-radius: 10px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .cl-feat  { background: rgba(26,127,55,0.12);  color: var(--accent2); border: 1px solid rgba(26,127,55,0.3); }
+    .cl-fix   { background: rgba(9,105,218,0.1);   color: var(--accent);  border: 1px solid rgba(9,105,218,0.3); }
+    .cl-sec   { background: rgba(154,103,0,0.1);   color: var(--warn);    border: 1px solid rgba(154,103,0,0.3); }
+    [data-theme="dark"] .cl-feat { background: rgba(63,185,80,0.15);  border-color: rgba(63,185,80,0.4); }
+    [data-theme="dark"] .cl-fix  { background: rgba(88,166,255,0.12); border-color: rgba(88,166,255,0.4); }
+    [data-theme="dark"] .cl-sec  { background: rgba(210,153,34,0.15); border-color: rgba(210,153,34,0.4); }
+    .cl-entry li { margin-bottom: 8px; }
+    .cl-entry li:last-child { margin-bottom: 0; }
+
     /* ── FOOTER ── */
     .page-footer {
       margin-top: 60px;
@@ -519,6 +562,12 @@
       </a>
       <a class="nav-link" href="#" data-section="testing">
         <span class="icon">🧪</span> Testing
+      </a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Project</div>
+      <a class="nav-link" href="#" data-section="changelog">
+        <span class="icon">📋</span> Changelog
       </a>
     </div>
       <a class="nav-link" href="/guide/jobs.html" style="border-top:1px solid var(--border);margin-top:8px;padding-top:8px;">
@@ -1540,6 +1589,96 @@ the input is None. Also add a unit test for an empty list input.</code></pre>
       </div>
     </section>
 
+    <!-- ══════════════════════════════════════════════════════════════════
+         CHANGELOG
+    ══════════════════════════════════════════════════════════════════ -->
+    <section class="section" id="section-changelog">
+      <h2>Changelog</h2>
+      <p>A summary of every user-facing feature and notable fix since the project began. Most recent changes appear first.</p>
+
+      <div style="margin-top:32px;">
+
+        <!-- ── 2026-06-08 ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-08</div>
+          <h3>Security hardening, Docker cleanup &amp; reliability fixes</h3>
+          <ul>
+            <li><span class="cl-sec">Security</span> Pinned <code>gitpython</code> and <code>litellm</code> to versions that address known CVEs.</li>
+            <li><span class="cl-fix">Fix</span> Temporary clone directories are now reliably removed after each job completes, preventing disk accumulation on long-running servers.</li>
+            <li><span class="cl-fix">Fix</span> Existing GitHub PRs and GitLab MRs are detected and reused instead of causing a crash when the bot runs on the same issue twice.</li>
+            <li><span class="cl-fix">Fix</span> Webhook handling for both GitHub and GitLab was hardened against malformed payloads.</li>
+          </ul>
+        </div>
+
+        <!-- ── 2026-06-08 Claude Code ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-08</div>
+          <h3>Claude Code engine</h3>
+          <ul>
+            <li><span class="cl-feat">Feature</span> Added a third AI engine powered by Claude Code. Select it by adding the label <span class="label-pill label-purple">agent: claude-code</span> to an issue.</li>
+          </ul>
+        </div>
+
+        <!-- ── 2026-06-07 ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-07</div>
+          <h3>OpenCode engine &amp; re-run reliability</h3>
+          <ul>
+            <li><span class="cl-feat">Feature</span> Added OpenCode as a second AI coding engine. Select it with the label <span class="label-pill label-purple">agent: opencode</span>.</li>
+            <li><span class="cl-feat">Feature</span> A custom LLM provider config is written before each OpenCode run, so the engine always uses the endpoint configured in <code>.env</code>.</li>
+            <li><span class="cl-fix">Fix</span> OpenCode changes are automatically committed after the run, so no-commit runs are handled correctly.</li>
+            <li><span class="cl-fix">Fix</span> OpenCode is now invoked with a <code>--dir</code> flag pointing to the correct repository path.</li>
+            <li><span class="cl-fix">Fix</span> AI branches are now force-pushed, so re-running the bot on the same issue updates the existing remote branch instead of failing.</li>
+            <li><span class="cl-fix">Fix</span> All existing <code>ai:</code> status labels are cleared before setting a new one, preventing stale labels from accumulating.</li>
+          </ul>
+        </div>
+
+        <!-- ── 2026-06-06 (jobs + rework) ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-06</div>
+          <h3>Jobs admin UI, <code>/rework</code> command &amp; persistent job store</h3>
+          <ul>
+            <li><span class="cl-feat">Feature</span> <strong>Jobs admin page</strong> at <a href="/guide/jobs.html" target="_blank">/guide/jobs.html</a> — a live-refreshing table showing every bot run with status, issue, engine, creation time, and PR link. Supports dark mode and optional password protection.</li>
+            <li><span class="cl-feat">Feature</span> <strong><code>/api/jobs</code> endpoint</strong> — programmatic access to job history. Protected by <code>ADMIN_PASSWORD</code> when set.</li>
+            <li><span class="cl-feat">Feature</span> <strong><code>/rework</code> command</strong> — comment <code>/rework &lt;your feedback&gt;</code> on a bot-created PR to trigger a fresh run. The bot re-uses the original issue text and appends your feedback as reviewer notes, then force-pushes to the same branch.</li>
+            <li><span class="cl-feat">Feature</span> All job runs are now saved to a SQLite database (configurable via <code>DB_PATH</code>). History survives server restarts.</li>
+            <li><span class="cl-feat">Feature</span> <code>ADMIN_PASSWORD</code> config option — when set, the <code>/api/jobs</code> endpoint requires an <code>X-Admin-Token</code> header.</li>
+            <li><span class="cl-fix">Fix</span> If a previous run never opened a PR (e.g. it failed early), <code>/rework</code> on the issue itself also works — the bot restarts from scratch.</li>
+            <li><span class="cl-fix">Fix</span> PR branch lookup during rework is non-blocking; a lookup failure is logged and ignored rather than crashing the webhook handler.</li>
+          </ul>
+        </div>
+
+        <!-- ── 2026-06-06 (engines + docs) ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-06</div>
+          <h3>Pluggable engine layer, label routing &amp; documentation site</h3>
+          <ul>
+            <li><span class="cl-feat">Feature</span> <strong>Pluggable engine layer</strong> — the coding backend is swappable at runtime. Adding an <span class="label-pill label-purple">agent: &lt;name&gt;</span> label to an issue selects which engine handles it.</li>
+            <li><span class="cl-feat">Feature</span> This documentation site — served at <code>/guide</code> — was introduced alongside the engine layer.</li>
+            <li><span class="cl-feat">Feature</span> <strong>Issue status comments</strong> — the bot posts a comment at each stage (started, done, failed, needs clarification).</li>
+            <li><span class="cl-feat">Feature</span> <strong><code>TEST_CMD</code> is now optional</strong> — the bot works with any language. If no test command is set, the coding step runs without a test loop.</li>
+            <li><span class="cl-feat">Feature</span> <strong><code>AIDER_VERBOSE</code> flag</strong> — set to <code>true</code> for detailed Aider output; full output is captured and included in failure comments when no commits are made.</li>
+            <li><span class="cl-fix">Fix</span> Empty diffs no longer result in a failed PR creation (422 error) — the bot reports "needs clarification" instead.</li>
+          </ul>
+        </div>
+
+        <!-- ── 2026-06-06 Initial ── -->
+        <div class="cl-entry">
+          <div class="cl-date">2026-06-06 — Initial release</div>
+          <h3>Core functionality</h3>
+          <ul>
+            <li><span class="cl-feat">Feature</span> <strong>GitHub &amp; GitLab webhook support</strong> — HMAC-verified webhooks for issue-opened and issue-labeled events on both platforms.</li>
+            <li><span class="cl-feat">Feature</span> <strong>Aider AI coding engine</strong> — clones the target repo, creates an <code>ai/issue-{n}-{slug}</code> branch, runs Aider to implement the issue, then runs the test suite in a retry loop.</li>
+            <li><span class="cl-feat">Feature</span> <strong>Automatic PR/MR creation</strong> — once tests pass (or the retry limit is reached), a pull request or merge request is opened against the default branch.</li>
+            <li><span class="cl-feat">Feature</span> <strong>AI code review</strong> — a separate LLM session reviews the final diff and posts a structured comment (strengths, concerns, suggestions) on the issue.</li>
+            <li><span class="cl-feat">Feature</span> <strong>Async job queue</strong> — an asyncio worker processes jobs one at a time so webhook responses are immediate.</li>
+            <li><span class="cl-feat">Feature</span> <strong>Platform abstraction</strong> — a common <code>GitPlatform</code> interface makes GitHub and GitLab interchangeable without changes to the core workflow.</li>
+          </ul>
+        </div>
+
+      </div>
+    </section>
+
     <footer class="page-footer">
       <span>AI Coding Flow — built with FastAPI</span>
       <span>View source on <a href="https://github.com/t-community/ai-coding-flow" target="_blank">GitHub</a></span>
@@ -1586,6 +1725,7 @@ the input is None. Also add a unit test for an empty list input.</code></pre>
     labels: 'Labels', api: 'API Reference',
     architecture: 'Architecture', engines: 'Engine System',
     platforms: 'Platforms', extending: 'Extending', testing: 'Testing',
+    changelog: 'Changelog',
   };
 
   function navigate(id) {
