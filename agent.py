@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 import shlex
 import shutil
 import subprocess
@@ -45,6 +46,8 @@ def run_agent(
     branch: str,
     settings: Settings,
     engine: AgentEngine,
+    repo_url: str,
+    platform: str,
     start_ref: str = "",
 ) -> tuple[bool, str, str, str]:
     """
@@ -52,8 +55,8 @@ def run_agent(
     Returns (success, repo_path, initial_commit, error_msg).
     Synchronous — caller must use asyncio.to_thread.
     """
-    repo_path = WORK_DIR / str(issue_number)
-    _prepare_repo(repo_path, branch, settings, start_ref=start_ref)
+    repo_path = WORK_DIR / f"{_repo_slug(repo_url)}-{issue_number}"
+    _prepare_repo(repo_path, branch, settings, repo_url, platform, start_ref=start_ref)
     _configure_git_user(repo_path)
     initial_commit = _git_head(repo_path)
 
@@ -85,8 +88,15 @@ def run_agent(
     return False, str(repo_path), initial_commit, error_msg
 
 
-def push_branch(repo_path: str, branch: str, settings: Settings, force: bool = False) -> None:
-    auth_url = _authenticated_url(settings)
+def push_branch(
+    repo_path: str,
+    branch: str,
+    settings: Settings,
+    repo_url: str,
+    platform: str,
+    force: bool = False,
+) -> None:
+    auth_url = _authenticated_url(settings, repo_url, platform)
     subprocess.run(
         ["git", "remote", "set-url", "origin", auth_url],
         cwd=repo_path, check=True, capture_output=True,
@@ -106,8 +116,20 @@ def get_diff(repo_path: str, initial_commit: str) -> str:
     return result.stdout[:15000]
 
 
-def _prepare_repo(repo_path: Path, branch: str, settings: Settings, start_ref: str = "") -> None:
-    auth_url = _authenticated_url(settings)
+def _repo_slug(repo_url: str) -> str:
+    path = urlparse(repo_url).path.strip("/").removesuffix(".git")
+    return re.sub(r"[^a-z0-9]+", "-", path.lower()).strip("-")
+
+
+def _prepare_repo(
+    repo_path: Path,
+    branch: str,
+    settings: Settings,
+    repo_url: str,
+    platform: str,
+    start_ref: str = "",
+) -> None:
+    auth_url = _authenticated_url(settings, repo_url, platform)
     net_env = {**os.environ, **_git_ssl_env(settings)}
     if (repo_path / ".git").exists():
         subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True, capture_output=True,
@@ -204,9 +226,9 @@ def _run_tests(repo_path: Path, test_cmd: str) -> tuple[bool, str]:
     return result.returncode == 0, output
 
 
-def _authenticated_url(settings: Settings) -> str:
-    parsed = urlparse(settings.repo_url)
-    if settings.platform == "github":
+def _authenticated_url(settings: Settings, repo_url: str, platform: str) -> str:
+    parsed = urlparse(repo_url)
+    if platform == "github":
         netloc = f"x-access-token:{settings.github_token}@{parsed.netloc}"
     else:
         netloc = f"oauth2:{settings.gitlab_token}@{parsed.netloc}"

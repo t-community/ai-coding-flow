@@ -1,19 +1,19 @@
 from unittest.mock import MagicMock
 import pytest
-from agent import _build_prompt, _authenticated_url
+from agent import _build_prompt, _authenticated_url, _repo_slug
 
 
 def _settings(platform="github"):
     s = MagicMock()
-    s.platform = platform
     s.github_token = "ghp_testtoken"
     s.gitlab_token = "glpat_testtoken"
-    s.repo_url = (
-        "https://github.com/owner/repo"
-        if platform == "github"
-        else "https://gitlab.example.com/owner/repo"
-    )
     return s
+
+
+def _repo_url(platform="github"):
+    if platform == "github":
+        return "https://github.com/owner/repo"
+    return "https://gitlab.example.com/owner/repo"
 
 
 def test_build_prompt_contains_title():
@@ -26,31 +26,40 @@ def test_build_prompt_contains_body():
     assert "Users cannot log in after update" in prompt
 
 
+def test_repo_slug_github():
+    assert _repo_slug("https://github.com/owner/repo") == "owner-repo"
+
+
+def test_repo_slug_strips_dot_git():
+    assert _repo_slug("https://github.com/owner/repo.git") == "owner-repo"
+
+
+def test_repo_slug_gitlab_namespace():
+    assert _repo_slug("https://gitlab.example.com/group/project") == "group-project"
+
+
 def test_authenticated_url_github_embeds_token():
-    url = _authenticated_url(_settings("github"))
+    url = _authenticated_url(_settings("github"), _repo_url("github"), "github")
     assert "x-access-token:ghp_testtoken@github.com" in url
     assert url.startswith("https://")
 
 
 def test_authenticated_url_gitlab_embeds_token():
-    url = _authenticated_url(_settings("gitlab"))
+    url = _authenticated_url(_settings("gitlab"), _repo_url("gitlab"), "gitlab")
     assert "oauth2:glpat_testtoken@gitlab.example.com" in url
     assert url.startswith("https://")
 
 
 def test_authenticated_url_github_no_dot_git():
     s = MagicMock()
-    s.platform = "github"
     s.github_token = "tok"
-    s.repo_url = "https://github.com/owner/repo.git"
-    url = _authenticated_url(s)
+    s.gitlab_token = ""
+    url = _authenticated_url(s, "https://github.com/owner/repo.git", "github")
     assert url.startswith("https://x-access-token:tok@github.com")
 
 
 def test_run_agent_uses_provided_engine():
-    """run_agent must call engine.run, not a hard-coded aider subprocess."""
     from unittest.mock import MagicMock, patch
-    from pathlib import Path
     from agent import run_agent
 
     mock_engine = MagicMock()
@@ -59,9 +68,6 @@ def test_run_agent_uses_provided_engine():
     settings = MagicMock()
     settings.test_cmd = ""
     settings.max_retries = 3
-    settings.repo_url = "https://github.com/owner/repo"
-    settings.platform = "github"
-    settings.github_token = "ghp_test"
 
     with patch("agent._prepare_repo"), \
          patch("agent._configure_git_user"), \
@@ -73,6 +79,8 @@ def test_run_agent_uses_provided_engine():
             branch="ai/issue-1-test",
             settings=settings,
             engine=mock_engine,
+            repo_url="https://github.com/owner/repo",
+            platform="github",
         )
 
     assert success is True
@@ -84,12 +92,17 @@ def test_push_branch_includes_force_with_lease_when_force_true():
     from agent import push_branch
 
     settings = MagicMock()
-    settings.platform = "github"
     settings.github_token = "tok"
-    settings.repo_url = "https://github.com/owner/repo"
 
     with patch("agent.subprocess.run") as mock_run:
-        push_branch("/repo", "ai/issue-1-test", settings, force=True)
+        push_branch(
+            "/repo",
+            "ai/issue-1-test",
+            settings,
+            repo_url="https://github.com/owner/repo",
+            platform="github",
+            force=True,
+        )
 
     push_cmd = mock_run.call_args_list[1][0][0]
     assert "--force-with-lease" in push_cmd
@@ -100,12 +113,16 @@ def test_push_branch_no_force_flag_by_default():
     from agent import push_branch
 
     settings = MagicMock()
-    settings.platform = "github"
     settings.github_token = "tok"
-    settings.repo_url = "https://github.com/owner/repo"
 
     with patch("agent.subprocess.run") as mock_run:
-        push_branch("/repo", "ai/issue-1-test", settings)
+        push_branch(
+            "/repo",
+            "ai/issue-1-test",
+            settings,
+            repo_url="https://github.com/owner/repo",
+            platform="github",
+        )
 
     push_cmd = mock_run.call_args_list[1][0][0]
     assert "--force-with-lease" not in push_cmd
@@ -121,13 +138,10 @@ def test_run_agent_accepts_start_ref():
     settings = MagicMock()
     settings.test_cmd = ""
     settings.max_retries = 3
-    settings.repo_url = "https://github.com/owner/repo"
-    settings.platform = "github"
-    settings.github_token = "ghp_test"
 
     captured = {}
 
-    def fake_prepare(repo_path, branch, settings, start_ref=""):
+    def fake_prepare(repo_path, branch, settings, repo_url, platform, start_ref=""):
         captured["start_ref"] = start_ref
 
     with patch("agent._prepare_repo", side_effect=fake_prepare), \
@@ -140,6 +154,8 @@ def test_run_agent_accepts_start_ref():
             branch="ai/issue-1-test",
             settings=settings,
             engine=mock_engine,
+            repo_url="https://github.com/owner/repo",
+            platform="github",
             start_ref="origin/ai/issue-1-test",
         )
 
