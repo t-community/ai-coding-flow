@@ -1,12 +1,9 @@
 from pathlib import Path
-from typing import Literal
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    platform: Literal["github", "gitlab"]
-    repo_url: str
     github_token: str = ""
     gitlab_token: str = ""
     webhook_secret: str
@@ -29,20 +26,17 @@ class Settings(BaseSettings):
     agent_timeout: int = 600
     default_agent: str = "aider"
 
-    # Aider settings
     aider_verbose: bool = False
     aider_map_tokens: int = 2048
     aider_token_budget: int = 80000
 
-    # OpenCode settings
     opencode_context_limit: int = 32768
     opencode_output_limit: int = 4096
 
-    # ClaudeCode settings
     claudecode_router_port: int = 3456
     claudecode_router_startup_timeout: int = 15
 
     admin_password: str = ""
     db_path: str = str(Path(__file__).parent / "ai_jobs.db")
 
-    model_config = {"env_file": ".env"}
+    model_config = {"env_file": ".env", "extra": "ignore"}
