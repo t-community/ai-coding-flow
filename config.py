@@ -10,6 +10,9 @@ class Settings(BaseSettings):
     github_token: str = ""
     gitlab_token: str = ""
     webhook_secret: str
+    verbose: bool = False
+    verify_repo_ssl: bool = True
+    verify_engine_ssl: bool = True
     openai_api_base: str
     openai_api_key: str = "local"
     openai_model: str = "qwen2.5-coder:32b"
@@ -22,9 +25,23 @@ class Settings(BaseSettings):
         return v
 
     max_retries: int = 3
-    test_cmd: str = ""  # empty = skip testing entirely
-    aider_verbose: bool = False  # set true to log all Aider output
+    test_cmd: str = ""
+    agent_timeout: int = 600
     default_agent: str = "aider"
+
+    # Aider settings
+    aider_verbose: bool = False
+    aider_map_tokens: int = 2048
+    aider_token_budget: int = 80000
+
+    # OpenCode settings
+    opencode_context_limit: int = 32768
+    opencode_output_limit: int = 4096
+
+    # ClaudeCode settings
+    claudecode_router_port: int = 3456
+    claudecode_router_startup_timeout: int = 15
+
     admin_password: str = ""
     db_path: str = str(Path(__file__).parent / "ai_jobs.db")
 

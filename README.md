@@ -19,8 +19,8 @@ Issue Created → Webhook → AI Codes + Tests → PR/MR Opened → Review Comme
 1. A GitHub/GitLab webhook fires when a new issue is opened
 2. The server verifies the signature and enqueues the job
 3. A worker clones the repo to a temp directory, creates a branch `ai/issue-{n}-{slug}`
-4. [Aider](https://aider.chat) runs against the issue text, writes code, and runs your test suite
-5. On test failure, the error output is fed back to the LLM and Aider retries (up to `MAX_RETRIES`)
+4. The selected engine (Aider, OpenCode, or Claude Code) runs against the issue text, writes code, and runs your test suite
+5. On test failure, the error output is fed back to the LLM and the engine retries (up to `MAX_RETRIES`)
 6. On success: the branch is pushed, a PR/MR is created, and a review comment is posted
 7. On exhausted retries: a comment is posted on the issue explaining what failed
 
@@ -48,18 +48,62 @@ cp .env.example .env
 # Edit .env with your values
 ```
 
-| Variable | Description |
-|---|---|
-| `PLATFORM` | `github` or `gitlab` |
-| `REPO_URL` | Full HTTPS URL of the target repo |
-| `GITHUB_TOKEN` | Personal access token (repo scope) |
-| `GITLAB_TOKEN` | Personal access token (api scope) |
-| `WEBHOOK_SECRET` | Random string — must match your webhook config |
-| `OPENAI_API_BASE` | Your LLM endpoint, e.g. `http://localhost:11434/v1` |
-| `OPENAI_API_KEY` | `local` for offline endpoints |
-| `OPENAI_MODEL` | Model name, e.g. `qwen2.5-coder:32b` |
-| `MAX_RETRIES` | Max test-fix cycles before giving up (default: `3`) |
-| `TEST_CMD` | Command to run tests (default: `pytest`) |
+### Platform
+
+| Variable | Description | Default |
+|---|---|---|
+| `PLATFORM` | `github` or `gitlab` | — |
+| `REPO_URL` | Full HTTPS URL of the target repo | — |
+| `GITHUB_TOKEN` | Personal access token (repo scope) | — |
+| `GITLAB_TOKEN` | Personal access token (api scope) | — |
+| `WEBHOOK_SECRET` | Random string — must match your webhook config | — |
+| `VERBOSE` | `true` = set log level to DEBUG | `false` |
+| `VERIFY_REPO_SSL` | `false` = skip SSL verification when cloning/pushing (useful for self-signed certs) | `true` |
+| `VERIFY_ENGINE_SSL` | `false` = skip SSL verification when connecting to the LLM endpoint | `true` |
+
+### LLM Endpoint
+
+| Variable | Description | Default |
+|---|---|---|
+| `OPENAI_API_BASE` | Your LLM endpoint, e.g. `http://localhost:11434/v1` | — |
+| `OPENAI_API_KEY` | API key; use `local` for offline endpoints | `local` |
+| `OPENAI_MODEL` | Model name, e.g. `qwen2.5-coder:32b` | — |
+
+### Workflow
+
+| Variable | Description | Default |
+|---|---|---|
+| `DEFAULT_AGENT` | Engine to use: `aider`, `opencode`, or `claudecode` (override per-issue with label `agent: <name>`) | `aider` |
+| `MAX_RETRIES` | Max test-fix cycles before giving up | `3` |
+| `TEST_CMD` | Command to run tests; leave empty to skip | — |
+| `AGENT_TIMEOUT` | Seconds before an engine subprocess is killed | `600` |
+
+### Aider Settings
+
+| Variable | Description | Default |
+|---|---|---|
+| `AIDER_MAP_TOKENS` | Tokens allocated to the repo map | `2048` |
+| `AIDER_TOKEN_BUDGET` | Max tokens of non-code files pre-loaded via `--file` | `80000` |
+
+### OpenCode Settings
+
+| Variable | Description | Default |
+|---|---|---|
+| `OPENCODE_CONTEXT_LIMIT` | Model context window advertised to OpenCode | `32768` |
+| `OPENCODE_OUTPUT_LIMIT` | Max output tokens advertised to OpenCode | `4096` |
+
+### Claude Code Settings
+
+| Variable | Description | Default |
+|---|---|---|
+| `CLAUDECODE_ROUTER_PORT` | Port the `ccr` router listens on | `3456` |
+| `CLAUDECODE_ROUTER_STARTUP_TIMEOUT` | Seconds to wait for `ccr` to start | `15` |
+
+### Server
+
+| Variable | Description | Default |
+|---|---|---|
+| `ADMIN_PASSWORD` | If set, protects `GET /api/jobs` with `X-Admin-Token` header | — |
 
 ### Run the Server
 
@@ -116,7 +160,8 @@ GitHub/GitLab Issue Created
   ┌─────────────────────────────────┐
   │  Clone/pull repo → /tmp/        │
   │  Create branch ai/issue-{n}-…   │
-  │  Run Aider with issue text      │
+  │  Run engine with issue text     │
+  │    aider | opencode | claudecode│
   │  Run TEST_CMD                   │
   │  Retry up to MAX_RETRIES times  │
   └─────────────────────────────────┘
@@ -134,7 +179,8 @@ GitHub/GitLab Issue Created
 |---|---|
 | `server.py` | FastAPI app, webhook endpoints, HMAC verification |
 | `worker.py` | asyncio job queue, orchestrates each issue |
-| `agent.py` | Aider wrapper, clone/push helpers, retry loop |
+| `agent.py` | Clone/push helpers, retry loop |
+| `engines/` | Pluggable engine adapters: `aider`, `opencode`, `claudecode` |
 | `reviewer.py` | Fresh LLM call to review the final diff |
 | `platforms/` | GitHub + GitLab abstraction |
 | `config.py` | Pydantic-settings, all config from `.env` |

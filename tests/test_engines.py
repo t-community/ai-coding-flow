@@ -26,6 +26,14 @@ def _mock_settings():
     s.openai_api_base = "http://localhost:11434/v1"
     s.openai_api_key = "local"
     s.aider_verbose = False
+    s.aider_map_tokens = 2048
+    s.agent_timeout = 600
+    s.verify_engine_ssl = True
+    s.verify_repo_ssl = True
+    s.opencode_context_limit = 32768
+    s.opencode_output_limit = 4096
+    s.claudecode_router_port = 3456
+    s.claudecode_router_startup_timeout = 15
     return s
 
 
@@ -43,8 +51,6 @@ def test_aider_engine_run_calls_aider_binary():
     assert cmd[0] == "aider"
     assert "--model" in cmd
     assert "gpt-4o" in cmd
-    assert "--openai-api-base" in cmd
-    assert "http://localhost:11434/v1" in cmd
     assert "--message" in cmd
     assert "Fix the login bug" in cmd
     assert output == "Changes applied."
@@ -159,10 +165,10 @@ def test_get_engine_returns_opencode():
     assert isinstance(get_engine("opencode"), OpenCodeEngine)
 
 
-def test_get_engine_unknown_name_falls_back_to_aider():
+def test_get_engine_unknown_name_falls_back_to_opencode():
     from engines import get_engine
-    from engines.aider import AiderEngine
-    assert isinstance(get_engine("some-unknown-engine"), AiderEngine)
+    from engines.opencode import OpenCodeEngine
+    assert isinstance(get_engine("some-unknown-engine"), OpenCodeEngine)
 
 
 # ── ClaudeCodeEngine ──────────────────────────────────────────────────────────

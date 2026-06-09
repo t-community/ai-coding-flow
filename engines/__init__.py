@@ -17,6 +17,6 @@ _ENGINES: dict[str, type[AgentEngine]] = {
 def get_engine(name: str) -> AgentEngine:
     engine_cls = _ENGINES.get(name)
     if engine_cls is None:
-        logger.warning("Unknown engine %r — falling back to AiderEngine", name)
-        return AiderEngine()
+        logger.warning("Unknown engine %r — falling back to OpenCodeEngine", name)
+        return OpenCodeEngine()
     return engine_cls()

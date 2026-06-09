@@ -49,13 +49,13 @@ def test_pick_engine_uses_default_when_no_agent_label():
     assert isinstance(engine, AiderEngine)
 
 
-def test_pick_engine_unknown_label_falls_back_to_aider():
+def test_pick_engine_unknown_label_falls_back_to_opencode():
     from worker import _pick_engine
-    from engines.aider import AiderEngine
+    from engines.opencode import OpenCodeEngine
     settings = MagicMock()
     settings.default_agent = "aider"
     engine = _pick_engine(["agent: nonexistent"], settings)
-    assert isinstance(engine, AiderEngine)
+    assert isinstance(engine, OpenCodeEngine)
 
 
 def test_build_rework_body_contains_original_and_feedback():

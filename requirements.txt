@@ -15,3 +15,4 @@ aider-install
 gitpython>=3.1.47
 # CVE-2026-35030: LiteLLM JWT cache key collision auth bypass (fix: >=1.83.0)
 litellm>=1.83.0
+grep_ast

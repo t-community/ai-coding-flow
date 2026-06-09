@@ -20,6 +20,9 @@ class OpenCodeEngine(AgentEngine):
     def run(self, repo_path: Path, prompt: str, settings: Settings) -> str:
         _write_opencode_config(settings)
         model = f"{_PROVIDER_ID}/{settings.openai_model}"
+        env = {**os.environ, "OPENAI_API_KEY": settings.openai_api_key}
+        if not settings.verify_engine_ssl:
+            env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
         result = subprocess.run(
             [
                 "opencode",
@@ -30,13 +33,10 @@ class OpenCodeEngine(AgentEngine):
                 prompt,
             ],
             cwd=str(repo_path),
-            env={
-                **os.environ,
-                "OPENAI_API_KEY": settings.openai_api_key,
-            },
+            env=env,
             capture_output=True,
             text=True,
-            timeout=600,
+            timeout=settings.agent_timeout,
         )
         output = (result.stdout + result.stderr).strip()
         logger.info("OpenCode output:\n%s", output)
@@ -78,7 +78,7 @@ def _write_opencode_config(settings: Settings) -> None:
                         "reasoning": False,
                         "temperature": True,
                         "tool_call": True,
-                        "limit": {"context": 32768, "output": 4096},
+                        "limit": {"context": settings.opencode_context_limit, "output": settings.opencode_output_limit},
                         "cost": {"input": 0, "output": 0},
                     }
                 },

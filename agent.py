@@ -1,4 +1,5 @@
 import logging
+import os
 import shlex
 import shutil
 import subprocess
@@ -93,7 +94,8 @@ def push_branch(repo_path: str, branch: str, settings: Settings, force: bool = F
     cmd = ["git", "push", "-u", "origin", branch]
     if force:
         cmd.append("--force-with-lease")
-    subprocess.run(cmd, cwd=repo_path, check=True, capture_output=True)
+    subprocess.run(cmd, cwd=repo_path, check=True, capture_output=True,
+                   env={**os.environ, **_git_ssl_env(settings)})
 
 
 def get_diff(repo_path: str, initial_commit: str) -> str:
@@ -106,8 +108,10 @@ def get_diff(repo_path: str, initial_commit: str) -> str:
 
 def _prepare_repo(repo_path: Path, branch: str, settings: Settings, start_ref: str = "") -> None:
     auth_url = _authenticated_url(settings)
+    net_env = {**os.environ, **_git_ssl_env(settings)}
     if (repo_path / ".git").exists():
-        subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True, capture_output=True)
+        subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True, capture_output=True,
+                       env=net_env)
         if not start_ref:
             result = subprocess.run(
                 ["git", "symbolic-ref", "refs/remotes/origin/HEAD"],
@@ -121,9 +125,11 @@ def _prepare_repo(repo_path: Path, branch: str, settings: Settings, start_ref: s
             )
     else:
         repo_path.mkdir(parents=True, exist_ok=True)
-        subprocess.run(["git", "clone", auth_url, str(repo_path)], check=True, capture_output=True)
+        subprocess.run(["git", "clone", auth_url, str(repo_path)], check=True, capture_output=True,
+                       env=net_env)
         if start_ref:
-            subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True, capture_output=True)
+            subprocess.run(["git", "fetch", "origin"], cwd=repo_path, check=True, capture_output=True,
+                           env=net_env)
     checkout_cmd = ["git", "checkout", "-B", branch]
     if start_ref:
         checkout_cmd.append(start_ref)
@@ -205,3 +211,9 @@ def _authenticated_url(settings: Settings) -> str:
     else:
         netloc = f"oauth2:{settings.gitlab_token}@{parsed.netloc}"
     return urlunparse(parsed._replace(netloc=netloc))
+
+
+def _git_ssl_env(settings: Settings) -> dict:
+    if not settings.verify_repo_ssl:
+        return {"GIT_SSL_NO_VERIFY": "true"}
+    return {}

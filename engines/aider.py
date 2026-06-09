@@ -15,17 +15,20 @@ class AiderEngine(AgentEngine):
         return "aider"
 
     def run(self, repo_path: Path, prompt: str, settings: Settings) -> str:
+        cmd = [
+            "aider",
+            "--model", settings.openai_model,
+            "--yes",
+            "--auto-commits",
+            "--no-stream",
+            "--no-show-model-warnings",
+            "--map-tokens", str(settings.aider_map_tokens),
+            "--message", prompt,
+        ]
+        if not settings.verify_engine_ssl:
+            cmd.append("--no-verify-ssl")
         result = subprocess.run(
-            [
-                "aider",
-                "--model", settings.openai_model,
-                "--yes",
-                "--auto-commits",
-                "--no-stream",
-                "--no-show-model-warnings",
-                "--map-tokens", "2048",
-                "--message", prompt,
-            ],
+            cmd,
             cwd=str(repo_path),
             env={
                 **os.environ,
@@ -34,7 +37,7 @@ class AiderEngine(AgentEngine):
             },
             capture_output=True,
             text=True,
-            timeout=600,
+            timeout=settings.agent_timeout,
         )
         output = (result.stdout + result.stderr).strip()
         if settings.aider_verbose:

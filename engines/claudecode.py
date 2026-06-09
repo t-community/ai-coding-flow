@@ -11,9 +11,7 @@ from engines.base import AgentEngine
 
 logger = logging.getLogger(__name__)
 
-_ROUTER_PORT = 3456
 _ROUTER_HOST = "127.0.0.1"
-_ROUTER_URL = f"http://{_ROUTER_HOST}:{_ROUTER_PORT}"
 
 
 class ClaudeCodeEngine(AgentEngine):
@@ -23,31 +21,37 @@ class ClaudeCodeEngine(AgentEngine):
 
     def run(self, repo_path: Path, prompt: str, settings: Settings) -> str:
         _write_router_config(settings)
+        port = settings.claudecode_router_port
+        router_url = f"http://{_ROUTER_HOST}:{port}"
 
-        already_running = _is_port_open(_ROUTER_HOST, _ROUTER_PORT)
+        already_running = _is_port_open(_ROUTER_HOST, port)
+        router_env = {**os.environ}
+        if not settings.verify_engine_ssl:
+            router_env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0"
         router_proc = (
             None
             if already_running
             else subprocess.Popen(
                 ["ccr", "start"],
+                env=router_env,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
         )
         try:
-            _wait_for_port(_ROUTER_HOST, _ROUTER_PORT, timeout=15)
+            _wait_for_port(_ROUTER_HOST, port, timeout=settings.claudecode_router_startup_timeout)
             result = subprocess.run(
                 ["claude", "-p", prompt, "--dangerously-skip-permissions"],
                 cwd=str(repo_path),
                 env={
                     **os.environ,
-                    "ANTHROPIC_BASE_URL": _ROUTER_URL,
+                    "ANTHROPIC_BASE_URL": router_url,
                     "ANTHROPIC_AUTH_TOKEN": settings.openai_api_key,
                     "CLAUDE_CODE_DISABLE_TELEMETRY": "1",
                 },
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=settings.agent_timeout,
             )
             output = (result.stdout + result.stderr).strip()
             logger.info("Claude Code output:\n%s", output)

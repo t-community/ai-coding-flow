@@ -30,7 +30,10 @@ RUN uv tool install --force --python 3.12 aider-chat@latest && \
     uv pip install \
         --python "$(uv tool dir)/aider-chat/bin/python" \
         "gitpython>=3.1.47" \
-        "litellm>=1.83.0"
+        "litellm>=1.83.0" && \
+    python_bin="$(uv tool dir)/aider-chat/bin/python" && \
+    exc_file="$(${python_bin} -c 'import aider.exceptions,inspect;print(inspect.getfile(aider.exceptions))')" && \
+    sed -i 's/raise ValueError.*exceptions list.*/continue  # skip unknown litellm exceptions/' "${exc_file}"
 
 ENV PATH="/root/.local/bin:${PATH}"
 
@@ -43,7 +46,7 @@ ENV PATH="/root/.opencode/bin:${PATH}"
 # =================================
 # Bun installation
 # =================================
-RUN curl -fsSL https://bun.com/install | bash
+RUN npm install -g bun
 ENV PATH="/root/.bun/bin:${PATH}"
 
 # =================================

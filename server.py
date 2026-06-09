@@ -18,6 +18,7 @@ from worker import enqueue_job, start_worker
 
 logger = logging.getLogger(__name__)
 settings = Settings()
+logging.basicConfig(level=logging.DEBUG if settings.verbose else logging.INFO)
 
 
 @asynccontextmanager
