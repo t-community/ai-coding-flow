@@ -8,6 +8,8 @@ from fastapi.testclient import TestClient
 
 
 SECRET = "test-secret"
+GITHUB_REPO_URL = "https://github.com/owner/repo.git"
+GITLAB_REPO_URL = "https://gitlab.example.com/owner/repo.git"
 
 
 def _sign(body: bytes, secret: str = SECRET) -> str:
@@ -17,11 +19,13 @@ def _sign(body: bytes, secret: str = SECRET) -> str:
 
 ISSUE_OPENED = {
     "action": "opened",
+    "repository": {"clone_url": GITHUB_REPO_URL},
     "issue": {"number": 42, "title": "Fix bug", "body": "There is a bug"},
 }
 
 GITLAB_ISSUE_OPENED = {
     "object_kind": "issue",
+    "project": {"http_url_to_repo": GITLAB_REPO_URL},
     "object_attributes": {
         "iid": 7,
         "title": "Fix bug",
@@ -33,8 +37,6 @@ GITLAB_ISSUE_OPENED = {
 
 @pytest.fixture(autouse=True)
 def set_env(monkeypatch):
-    monkeypatch.setenv("PLATFORM", "github")
-    monkeypatch.setenv("REPO_URL", "https://github.com/owner/repo")
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("WEBHOOK_SECRET", SECRET)
     monkeypatch.setenv("OPENAI_API_BASE", "http://localhost:11434/v1")
@@ -59,6 +61,9 @@ def test_github_valid_signature_queues_job(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "queued"
     mock_enqueue.assert_called_once()
+    kwargs = mock_enqueue.call_args.kwargs
+    assert kwargs["repo_url"] == GITHUB_REPO_URL
+    assert kwargs["platform"] == "github"
 
 
 def test_github_invalid_signature_returns_403(client):
@@ -72,7 +77,7 @@ def test_github_invalid_signature_returns_403(client):
 
 
 def test_github_non_issue_event_is_ignored(client):
-    payload = {"action": "labeled", "label": {"name": "bug"}}
+    payload = {"action": "labeled", "label": {"name": "bug"}, "repository": {"clone_url": GITHUB_REPO_URL}}
     body = json.dumps(payload).encode()
     resp = client.post(
         "/webhook/github",
@@ -106,6 +111,9 @@ def test_gitlab_valid_token_queues_job(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "queued"
     mock_enqueue.assert_called_once()
+    kwargs = mock_enqueue.call_args.kwargs
+    assert kwargs["repo_url"] == GITLAB_REPO_URL
+    assert kwargs["platform"] == "gitlab"
 
 
 def test_gitlab_invalid_token_returns_403(client):
@@ -119,7 +127,7 @@ def test_gitlab_invalid_token_returns_403(client):
 
 
 def test_gitlab_non_issue_event_is_ignored(client):
-    payload = {"object_kind": "push"}
+    payload = {"object_kind": "push", "project": {"http_url_to_repo": GITLAB_REPO_URL}}
     body = json.dumps(payload).encode()
     resp = client.post(
         "/webhook/gitlab",
@@ -133,17 +141,20 @@ def test_gitlab_non_issue_event_is_ignored(client):
 GITHUB_AGENT_LABELED = {
     "action": "labeled",
     "label": {"name": "agent: opencode"},
+    "repository": {"clone_url": GITHUB_REPO_URL},
     "issue": {"number": 42, "title": "Fix bug", "body": "There is a bug"},
 }
 
 GITHUB_NON_AGENT_LABELED = {
     "action": "labeled",
     "label": {"name": "bug"},
+    "repository": {"clone_url": GITHUB_REPO_URL},
     "issue": {"number": 42, "title": "Fix bug", "body": "There is a bug"},
 }
 
 GITLAB_LABEL_UPDATED = {
     "object_kind": "issue",
+    "project": {"http_url_to_repo": GITLAB_REPO_URL},
     "object_attributes": {
         "iid": 7,
         "title": "Fix bug",
@@ -160,6 +171,7 @@ GITLAB_LABEL_UPDATED = {
 
 GITLAB_NON_AGENT_LABEL_UPDATED = {
     "object_kind": "issue",
+    "project": {"http_url_to_repo": GITLAB_REPO_URL},
     "object_attributes": {
         "iid": 7,
         "title": "Fix bug",
@@ -186,6 +198,7 @@ def test_github_agent_label_added_queues_job(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "queued"
     mock_enqueue.assert_called_once()
+    assert mock_enqueue.call_args.kwargs["repo_url"] == GITHUB_REPO_URL
 
 
 def test_github_non_agent_label_added_is_ignored(client):
@@ -212,6 +225,7 @@ def test_gitlab_agent_label_added_queues_job(client):
     assert resp.status_code == 200
     assert resp.json()["status"] == "queued"
     mock_enqueue.assert_called_once()
+    assert mock_enqueue.call_args.kwargs["repo_url"] == GITLAB_REPO_URL
 
 
 def test_gitlab_non_agent_label_update_is_ignored(client):
@@ -230,6 +244,7 @@ def test_gitlab_non_agent_label_update_is_ignored(client):
 GITHUB_REWORK_COMMENT = {
     "action": "created",
     "sender": {"type": "User"},
+    "repository": {"clone_url": GITHUB_REPO_URL},
     "comment": {"body": "/rework please add error handling"},
     "issue": {
         "number": 42,
@@ -242,6 +257,7 @@ GITHUB_REWORK_COMMENT = {
 GITHUB_BOT_REWORK_COMMENT = {
     "action": "created",
     "sender": {"type": "Bot"},
+    "repository": {"clone_url": GITHUB_REPO_URL},
     "comment": {"body": "/rework please add error handling"},
     "issue": {
         "number": 42,
@@ -253,6 +269,7 @@ GITHUB_BOT_REWORK_COMMENT = {
 
 GITLAB_REWORK_NOTE = {
     "object_kind": "note",
+    "project": {"http_url_to_repo": GITLAB_REPO_URL},
     "object_attributes": {
         "noteable_type": "MergeRequest",
         "note": "/rework please add error handling",
@@ -280,19 +297,19 @@ def test_github_rework_comment_queues_rework_job(client):
     kwargs = mock_enqueue.call_args.kwargs
     assert kwargs["pr_branch"] == "ai/issue-42-fix-bug"
     assert "/rework" in kwargs["rework_comment"]
+    assert kwargs["repo_url"] == GITHUB_REPO_URL
 
 
 def test_github_rework_on_plain_issue_queues_fresh_job(client):
-    """If no PR exists yet (previous run failed), /rework on the issue starts a fresh run."""
     payload = {
         "action": "created",
         "sender": {"type": "User"},
+        "repository": {"clone_url": GITHUB_REPO_URL},
         "comment": {"body": "/rework try again"},
         "issue": {
             "number": 5,
             "title": "Fix bug",
             "body": "There is a bug",
-            # no "pull_request" key
         },
     }
     body = json.dumps(payload).encode()
@@ -308,6 +325,7 @@ def test_github_rework_on_plain_issue_queues_fresh_job(client):
     kwargs = mock_enqueue.call_args.kwargs
     assert kwargs["issue_number"] == 5
     assert "pr_branch" not in kwargs
+    assert kwargs["repo_url"] == GITHUB_REPO_URL
 
 
 def test_github_bot_rework_comment_is_ignored(client):
@@ -337,12 +355,13 @@ def test_gitlab_rework_note_queues_rework_job(client):
     kwargs = mock_enqueue.call_args.kwargs
     assert kwargs["pr_branch"] == "ai/issue-42-fix-bug"
     assert "/rework" in kwargs["rework_comment"]
+    assert kwargs["repo_url"] == GITLAB_REPO_URL
 
 
 def test_gitlab_rework_on_plain_issue_queues_fresh_job(client):
-    """If no MR exists yet, /rework on the issue starts a fresh run."""
     payload = {
         "object_kind": "note",
+        "project": {"http_url_to_repo": GITLAB_REPO_URL},
         "object_attributes": {
             "noteable_type": "Issue",
             "noteable_id": 7,
@@ -367,6 +386,7 @@ def test_gitlab_rework_on_plain_issue_queues_fresh_job(client):
     kwargs = mock_enqueue.call_args.kwargs
     assert kwargs["issue_number"] == 7
     assert "pr_branch" not in kwargs
+    assert kwargs["repo_url"] == GITLAB_REPO_URL
 
 
 def test_api_jobs_open_when_no_password(client):
@@ -376,8 +396,6 @@ def test_api_jobs_open_when_no_password(client):
 
 
 def test_api_jobs_wrong_token_returns_401(monkeypatch):
-    monkeypatch.setenv("PLATFORM", "github")
-    monkeypatch.setenv("REPO_URL", "https://github.com/owner/repo")
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("WEBHOOK_SECRET", SECRET)
     monkeypatch.setenv("OPENAI_API_BASE", "http://localhost:11434/v1")
@@ -393,8 +411,6 @@ def test_api_jobs_wrong_token_returns_401(monkeypatch):
 
 
 def test_api_jobs_correct_token_returns_200(monkeypatch):
-    monkeypatch.setenv("PLATFORM", "github")
-    monkeypatch.setenv("REPO_URL", "https://github.com/owner/repo")
     monkeypatch.setenv("GITHUB_TOKEN", "ghp_test")
     monkeypatch.setenv("WEBHOOK_SECRET", SECRET)
     monkeypatch.setenv("OPENAI_API_BASE", "http://localhost:11434/v1")

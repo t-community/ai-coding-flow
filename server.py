@@ -66,12 +66,14 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
 
     payload = await request.json()
     action = payload.get("action")
+    repo_url = payload.get("repository", {}).get("clone_url", "")
 
     if action == "opened" and "issue" in payload:
         issue = payload["issue"]
         background_tasks.add_task(
             enqueue_job,
             platform="github",
+            repo_url=repo_url,
             issue_number=issue["number"],
             title=issue.get("title", ""),
             body=issue.get("body") or "",
@@ -85,6 +87,7 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
             background_tasks.add_task(
                 enqueue_job,
                 platform="github",
+                repo_url=repo_url,
                 issue_number=issue["number"],
                 title=issue.get("title", ""),
                 body=issue.get("body") or "",
@@ -109,6 +112,7 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
                 background_tasks.add_task(
                     enqueue_job,
                     platform="github",
+                    repo_url=repo_url,
                     issue_number=issue_number,
                     title=issue.get("title", ""),
                     body=issue.get("body") or "",
@@ -116,14 +120,14 @@ async def github_webhook(request: Request, background_tasks: BackgroundTasks):
                     rework_comment=comment_body,
                 )
             else:
-                # No PR yet (previous run failed or made no changes) — restart fresh
                 background_tasks.add_task(
                     enqueue_job,
                     platform="github",
+                    repo_url=repo_url,
                     issue_number=issue["number"],
                     title=issue.get("title", ""),
                     body=issue.get("body") or "",
-                    rework_comment=comment_body
+                    rework_comment=comment_body,
                 )
             return {"status": "queued"}
 
@@ -138,11 +142,13 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
 
     payload = await request.json()
     attrs = payload.get("object_attributes", {})
+    repo_url = payload.get("project", {}).get("http_url_to_repo", "")
 
     if payload.get("object_kind") == "issue" and attrs.get("action") == "open":
         background_tasks.add_task(
             enqueue_job,
             platform="gitlab",
+            repo_url=repo_url,
             issue_number=attrs["iid"],
             title=attrs.get("title", ""),
             body=attrs.get("description") or "",
@@ -158,6 +164,7 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
             background_tasks.add_task(
                 enqueue_job,
                 platform="gitlab",
+                repo_url=repo_url,
                 issue_number=attrs["iid"],
                 title=attrs.get("title", ""),
                 body=attrs.get("description") or "",
@@ -178,6 +185,7 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
                 background_tasks.add_task(
                     enqueue_job,
                     platform="gitlab",
+                    repo_url=repo_url,
                     issue_number=issue_number,
                     title=mr.get("title", ""),
                     body=mr.get("description") or "",
@@ -186,7 +194,6 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
                 )
                 return {"status": "queued"}
             elif note_attrs.get("noteable_type") == "Issue":
-                # No MR yet (previous run failed) — restart fresh from the issue
                 issue = payload.get("issue", {})
                 issue_number = issue.get("iid") or note_attrs.get("noteable_id")
                 if not issue_number:
@@ -195,10 +202,11 @@ async def gitlab_webhook(request: Request, background_tasks: BackgroundTasks):
                 background_tasks.add_task(
                     enqueue_job,
                     platform="gitlab",
+                    repo_url=repo_url,
                     issue_number=issue_number,
                     title=issue.get("title", ""),
                     body=issue.get("description") or "",
-                    rework_comment=note_text
+                    rework_comment=note_text,
                 )
                 return {"status": "queued"}
 
