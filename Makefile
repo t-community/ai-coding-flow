@@ -1,7 +1,7 @@
 .PHONY: install run dev test clean docker-build docker-push
 
 AIDER_SITE := $(shell uv tool dir)/aider-chat/lib/python3.12/site-packages
-IMAGE      ?= ai-coding-flow
+IMAGE      ?= khchiang1121/ai-coding-flow
 SHA        := $(shell git rev-parse --short HEAD)
 
 install:
@@ -27,3 +27,6 @@ docker-build:
 docker-push:
 	docker push $(IMAGE):$(SHA)
 	docker push $(IMAGE):latest
+
+docker-run:
+	docker run -p 8000:8000 --env-file .env $(IMAGE):latest
