@@ -41,3 +41,15 @@ def test_list_jobs_respects_limit(db):
         store.create_job(db, platform="github", issue_number=i, issue_title=f"Issue {i}")
     jobs = store.list_jobs(db, limit=3)
     assert len(jobs) == 3
+
+
+def test_create_job_stores_repo_url(db):
+    store.create_job(
+        db,
+        platform="github",
+        repo_url="https://github.com/owner/repo.git",
+        issue_number=1,
+        issue_title="Fix bug",
+    )
+    jobs = store.list_jobs(db)
+    assert jobs[0]["repo_url"] == "https://github.com/owner/repo.git"

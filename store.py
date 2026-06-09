@@ -12,6 +12,7 @@ def init_db(db_path: str) -> None:
             CREATE TABLE IF NOT EXISTS jobs (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
                 platform     TEXT NOT NULL,
+                repo_url     TEXT NOT NULL DEFAULT '',
                 issue_number INTEGER NOT NULL,
                 issue_title  TEXT NOT NULL,
                 engine       TEXT NOT NULL DEFAULT '',
@@ -22,15 +23,26 @@ def init_db(db_path: str) -> None:
                 updated_at   TEXT NOT NULL
             )
         """)
+        try:
+            conn.execute("ALTER TABLE jobs ADD COLUMN repo_url TEXT NOT NULL DEFAULT ''")
+        except sqlite3.OperationalError:
+            pass
 
 
-def create_job(db_path: str, *, platform: str, issue_number: int, issue_title: str) -> int:
+def create_job(
+    db_path: str,
+    *,
+    platform: str,
+    issue_number: int,
+    issue_title: str,
+    repo_url: str = "",
+) -> int:
     now = datetime.now(timezone.utc).isoformat()
     with sqlite3.connect(db_path) as conn:
         cur = conn.execute(
-            "INSERT INTO jobs (platform, issue_number, issue_title, created_at, updated_at)"
-            " VALUES (?, ?, ?, ?, ?)",
-            (platform, issue_number, issue_title, now, now),
+            "INSERT INTO jobs (platform, repo_url, issue_number, issue_title, created_at, updated_at)"
+            " VALUES (?, ?, ?, ?, ?, ?)",
+            (platform, repo_url, issue_number, issue_title, now, now),
         )
         return cur.lastrowid
 
