@@ -1,6 +1,8 @@
-.PHONY: install run dev test clean
+.PHONY: install run dev test clean docker-build docker-push
 
 AIDER_SITE := $(shell uv tool dir)/aider-chat/lib/python3.12/site-packages
+IMAGE      ?= ai-coding-flow
+SHA        := $(shell git rev-parse --short HEAD)
 
 install:
 	uv venv --python 3.13 .venv
@@ -18,3 +20,10 @@ test:
 
 clean:
 	rm -rf .venv __pycache__ .pytest_cache
+
+docker-build:
+	docker build -t $(IMAGE):$(SHA) -t $(IMAGE):latest .
+
+docker-push:
+	docker push $(IMAGE):$(SHA)
+	docker push $(IMAGE):latest
